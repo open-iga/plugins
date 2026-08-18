@@ -1,0 +1,30 @@
+{
+    "name": "@open-iga/plugin-core",
+    "version": "0.0.1",
+    "description": "A wrapper around the toolchain to provide a seamless DX for plugin development",
+    "bin": {
+        "open-iga": "lib/cli/bin.ts"
+    },
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./lib/index.ts",
+            "bun": "./lib/index.ts",
+            "default": "./lib/index.ts"
+        },
+        "./internals": {
+            "types": "./lib/internals.ts",
+            "bun": "./lib/internals.ts",
+            "default": "./lib/internals.ts"
+        }
+    },
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "dependencies": {
+        "zod": "catalog:"
+    },
+    "devDependencies": {
+        "@types/bun": "catalog:"
+    }
+}
