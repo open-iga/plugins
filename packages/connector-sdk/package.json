@@ -1,5 +1,5 @@
 {
-    "name": "@open-iga/plugin-core",
+    "name": "@open-iga/connector-sdk",
     "version": "0.0.1",
     "description": "A wrapper around the toolchain to provide a seamless DX for plugin development",
     "bin": {

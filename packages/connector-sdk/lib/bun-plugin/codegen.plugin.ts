@@ -81,7 +81,7 @@ export const codegenPlugin = (authorEntryPath: string, ctx: BuildContext): BunPl
                 loader: 'ts',
                 contents: [
                     `import plugin from ${JSON.stringify(authorAbs)};`,
-                    `import { createRuntimeDispatcher } from '@open-iga/plugin-core/internals';`,
+                    `import { createRuntimeDispatcher } from '@open-iga/connector-sdk/internals';`,
                     `const _dispatch = createRuntimeDispatcher(plugin);`,
                     `export function dispatch() { return _dispatch(); }`,
                 ].join('\n'),
