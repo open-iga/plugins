@@ -1,6 +1,7 @@
-import type { z } from 'zod';
-import type { pluginAccountActionSchema } from '../validation-schema/plugin.account-action.schema.ts';
+import type { PluginAccountAction } from '../validation-schema/plugin.account-action.schema.ts';
 import type { PluginConfig } from '../validation-schema/plugin.config.schema.ts';
+import type { handlerInputOutputSchema } from '../validation-schema/plugin.account-action-handler.schema.ts';
+import type * as z from 'zod/mini';
 
 type SimplifiedRuntimeConfig<Type> = { [Property in keyof Type]: Type[Property] };
 type RuntimeConfig<Config extends PluginConfig = PluginConfig> = SimplifiedRuntimeConfig<
@@ -14,17 +15,21 @@ type RuntimeConfig<Config extends PluginConfig = PluginConfig> = SimplifiedRunti
 export type AccountAction<
     Config extends PluginConfig = PluginConfig,
     ActionConfig extends PluginConfig = [],
-> = Pick<z.infer<typeof pluginAccountActionSchema>, 'type' | 'description' | 'endpoints'> & {
+    Type extends PluginAccountAction['type'] = PluginAccountAction['type'],
+> = Pick<PluginAccountAction, 'type' | 'description' | 'endpoints'> & {
     // Optional action-level config, on top of the plugin-level config.
     config?: ActionConfig;
     handler: (context: {
         // Plugin-level and action-level config, both resolved and merged.
+        input: z.infer<(typeof handlerInputOutputSchema)[Type]['input']>;
         config: SimplifiedRuntimeConfig<RuntimeConfig<Config> & RuntimeConfig<ActionConfig>>;
-    }) => 0 | 1;
+    }) =>
+        | z.infer<(typeof handlerInputOutputSchema)[Type]['output']>
+        | Promise<z.infer<(typeof handlerInputOutputSchema)[Type]['output']>>;
 };
 
 export class OpenIgaPlugin<const Config extends PluginConfig> {
-    // TODO: extend the registry after introducing entitlements
+    // TODO: extend the registry to include entitlements
     readonly registry = new Map<string, AccountAction<Config, PluginConfig>>();
     private readonly accountActionDelimiter = '.account-action.';
 
@@ -35,10 +40,7 @@ export class OpenIgaPlugin<const Config extends PluginConfig> {
         managedResource: string,
         action: AccountAction<Config, ActionConfig>,
     ) {
-        this.registry.set(
-            `${managedResource}${this.accountActionDelimiter}${action.type}`,
-            action as AccountAction<Config, PluginConfig>,
-        );
+        this.registry.set(`${managedResource}${this.accountActionDelimiter}${action.type}`, action);
 
         return this;
     }

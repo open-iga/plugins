@@ -3,5 +3,6 @@
     "include": ["lib"],
     "compilerOptions": {
         "types": ["bun"]
-    }
+    },
+    "files": ["extism-jspdk.d.ts"]
 }

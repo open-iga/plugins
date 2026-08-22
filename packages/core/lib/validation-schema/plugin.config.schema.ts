@@ -1,9 +1,9 @@
-import { z } from 'zod';
+import * as z from 'zod/mini';
 
 export const pluginConfigSchema = z.array(
     z.object({
-        name: z.string().min(1),
-        description: z.string().min(1),
+        name: z.string().check(z.minLength(1)),
+        description: z.string().check(z.minLength(1)),
         required: z.boolean(),
     }),
 );

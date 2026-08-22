@@ -7,13 +7,127 @@ import { Logger } from '../utils/logger.ts';
 
 const log = new Logger('wasm');
 
+const ULEB128_LSB = 0x7f;
+const ULEB256_MSB = 0x80;
+
+const CUSTOM_SECTION_NAME = 'openiga:manifest';
+const CUSTOM_SECTION_ID = 0x00;
+
 /**
- * Compiles the codegen bundle to wasm via extism-js.
+ * ULEB128: Unsigned Little Endian Base 128
+ * Design: https://github.com/WebAssembly/design/discussions/1533
  *
- * Must run AFTER the codegen plugin in the `plugins` array — it depends on the
- * bundle + d.ts that step produces, and on `ctx.pluginName` (set by codegen's
- * setup). Guards first: verify the name is published, the artifacts exist, and
- * extism-js is installed; then rename the JS to <pluginName>.js and compile.
+ * Encoding:
+ *  - Extract lowest seven bits -> Perform Bitwise AND between LSB and the input
+ *  - Right shift the input by 7 (since Base 128 = 2^7)
+ *  - If the input is not Zero, perform bitwise OR between the input and MSB
+ *  - Repeat the above the until the input becomes zero
+ *
+ * Decoding is performed by WASM runtime
+ *
+ * Notes:
+ * 0x7f = LSB 127 (0111 1111)
+ * 0x80 = MSB 128 (1000 0000)
+ * Right shift factor: 7. Factor is 7 instead of 8 since the 8th bit used as traffic light for encoding
+ * */
+const uleb128Encoder = (input: number): number[] => {
+    const out: number[] = [];
+    do {
+        let b = input & ULEB128_LSB;
+        input >>>= 7;
+        if (input !== 0) {
+            b |= ULEB256_MSB;
+        }
+        out.push(b);
+    } while (input !== 0);
+    return out;
+};
+
+/**
+ * Converts the size into uleb128 encoded and includes the payload into the custom section
+ *
+ * Structure: Section ID -> Section length (ULEB128) -> Name length (ULEB128) -> Name (in bytes) -> Payload (bytes)
+ *
+ * Section ID:
+ * 0x00 = Custom Section
+ * 0x01 = Type Section
+ * 0x02 = Import Section
+ * 0x03 = Function Section
+ * 0x04 = Table Section
+ * 0x05 = Memory Section
+ * 0x06 = Global Section
+ * 0x07 = Export Section
+ * 0x08 = Start Section
+ * 0x09 = Element Section
+ * 0x0A = Code Section
+ * 0x0B = Data Section
+ * */
+const customSection = (name: string, payload: Uint8Array): Uint8Array => {
+    const nameBytes = new TextEncoder().encode(name);
+    const body = [...uleb128Encoder(nameBytes.length), ...nameBytes, ...payload];
+    return new Uint8Array([CUSTOM_SECTION_ID, ...uleb128Encoder(body.length), ...body]);
+};
+
+/**
+ * Extract WASM and include the manifest through custom section
+ * */
+const includeManifestInManifest = async ({
+    wasmFilePath,
+    manifestFilePath,
+}: {
+    wasmFilePath: string;
+    manifestFilePath: string;
+}) => {
+    const wasmBytes = new Uint8Array(await Bun.file(wasmFilePath).arrayBuffer());
+    const manifestBytes = new Uint8Array(await Bun.file(manifestFilePath).arrayBuffer());
+    const section = customSection(CUSTOM_SECTION_NAME, manifestBytes);
+
+    const newWasmBytes = new Uint8Array(wasmBytes.length + section.length);
+    newWasmBytes.set(wasmBytes, 0);
+    newWasmBytes.set(section, wasmBytes.length);
+    await Bun.write(wasmFilePath, newWasmBytes);
+};
+
+const compileToWasm = ({
+    emittedBundlePath,
+    wasmFilePath,
+    dtsFilePath,
+    newBundlePath,
+}: {
+    emittedBundlePath: string;
+    dtsFilePath: string;
+    wasmFilePath: string;
+    newBundlePath: string;
+}) => {
+    // 1. Validate codegen produced what we need.
+    const missing = [emittedBundlePath, dtsFilePath].filter((file) => !existsSync(file));
+    if (missing.length > 0) {
+        throw new Error(
+            `wasm: codegen artifacts missing (${missing.join(', ')}). ` +
+                `Ensure the codegen plugin runs before wasmPlugin in the plugins array.`,
+        );
+    }
+
+    // 2. Ensure extism-js is available.
+    const extism = Bun.which('extism-js');
+    if (!extism) {
+        throw new Error('wasm: `extism-js` not found on PATH. Install it — https://github.com/extism/js-pdk');
+    }
+
+    // 3. Rename JS to <pluginName>.js, then compile.
+    renameSync(emittedBundlePath, newBundlePath);
+    log.info('compiling', path.basename(newBundlePath), '→', path.basename(wasmFilePath));
+    const proc = Bun.spawnSync([extism, newBundlePath, '-i', dtsFilePath, '-o', wasmFilePath]);
+    if (proc.exitCode !== 0) {
+        throw new Error(`wasm: extism-js failed (exit ${proc.exitCode})\n${proc.stderr.toString()}`);
+    }
+
+    log.info('wasm ready:', wasmFilePath);
+};
+
+/**
+ * Converts the bundled code from {@link codegenPlugin} into WASM
+ * On top this, includes the manifest in WASM file as custom section
  */
 export const wasmPlugin = (ctx: BuildContext): BunPlugin => ({
     name: 'wasm',
@@ -24,35 +138,20 @@ export const wasmPlugin = (ctx: BuildContext): BunPlugin => ({
                 throw new Error('wasm: pluginName not set — codegen plugin must run first');
             }
 
-            const emittedBundle = path.join(OUT_DIR, `${VIRTUAL_ENTRY}.js`);
-            const dts = path.join(OUT_DIR, `${pluginName}.d.ts`);
-            const bundle = path.join(OUT_DIR, `${pluginName}.js`);
-            const wasm = path.join(OUT_DIR, `${pluginName}.wasm`);
+            const emittedBundlePath = path.join(OUT_DIR, `${VIRTUAL_ENTRY}.js`);
+            const dtsFilePath = path.join(OUT_DIR, `${pluginName}.d.ts`);
+            const newBundlePath = path.join(OUT_DIR, `${pluginName}.js`);
+            const wasmFilePath = path.join(OUT_DIR, `${pluginName}.wasm`);
+            const manifestFilePath = path.join(OUT_DIR, 'manifest.json');
 
-            // 1. Validate codegen produced what we need.
-            const missing = [emittedBundle, dts].filter((file) => !existsSync(file));
-            if (missing.length > 0) {
-                throw new Error(
-                    `wasm: codegen artifacts missing (${missing.join(', ')}). ` +
-                        `Ensure the codegen plugin runs before wasmPlugin in the plugins array.`,
-                );
-            }
+            compileToWasm({
+                emittedBundlePath,
+                dtsFilePath,
+                wasmFilePath,
+                newBundlePath,
+            });
 
-            // 2. Ensure extism-js is available.
-            const extism = Bun.which('extism-js');
-            if (!extism) {
-                throw new Error('wasm: `extism-js` not found on PATH. Install it — https://github.com/extism/js-pdk');
-            }
-
-            // 3. Rename JS to <pluginName>.js, then compile.
-            renameSync(emittedBundle, bundle);
-            log.info('compiling', path.basename(bundle), '→', path.basename(wasm));
-            const proc = Bun.spawnSync([extism, bundle, '-i', dts, '-o', wasm]);
-            if (proc.exitCode !== 0) {
-                throw new Error(`wasm: extism-js failed (exit ${proc.exitCode})\n${proc.stderr.toString()}`);
-            }
-
-            log.info('wasm ready:', wasm);
+            await includeManifestInManifest({ wasmFilePath, manifestFilePath });
         });
     },
 });

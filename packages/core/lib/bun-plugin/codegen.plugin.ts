@@ -1,7 +1,7 @@
 import type { BunPlugin } from 'bun';
 import * as path from 'node:path';
 import { OUT_DIR, type BuildContext } from '../cli/build.ts';
-import type { z } from 'zod';
+import type * as z from 'zod/mini';
 import { pluginAccountActionSchema } from '../validation-schema/plugin.account-action.schema.ts';
 import { OpenIgaPlugin } from '../iga-plugin/plugin.ts';
 import type { PluginConfig } from '../validation-schema/plugin.config.schema.ts';
@@ -28,6 +28,10 @@ type Manifest = {
     >)[];
 };
 
+/**
+ * There are two levels of validation: build and runtime
+ * Build-time validates the registry. Runtime is part of dispatcher that sits between the host and the plugin
+ * */
 const validateAndGeneratePluginManifest = (plugin: unknown): Manifest => {
     if (!(plugin instanceof OpenIgaPlugin)) {
         throw new Error(`Default export should be an instance of ${OpenIgaPlugin.name}`);
@@ -84,9 +88,11 @@ export const codegenPlugin = (authorEntryPath: string, ctx: BuildContext): BunPl
             };
         });
 
-        build.onEnd(async () => {
-            await Bun.write(path.join(OUT_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2));
-            await Bun.write(path.join(OUT_DIR, `${pluginName}.d.ts`), staticTypeFile);
-        });
+        // Written here in setup since both the manifest and the .d.ts are
+        // fully known before the build runs and don't depend on the newBundlePath output.
+        // The wasm plugin's onEnd reads the .d.ts, so producing it up front avoids
+        // racing that hook (onEnd callbacks across plugins aren't ordered).
+        await Bun.write(path.join(OUT_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2));
+        await Bun.write(path.join(OUT_DIR, `${pluginName}.d.ts`), staticTypeFile);
     },
 });

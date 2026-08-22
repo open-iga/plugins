@@ -1,28 +1,42 @@
 import type { OpenIgaPlugin } from './plugin.ts';
+import * as z from 'zod/mini';
+import { handlerInputOutputSchema } from '../validation-schema/plugin.account-action-handler.schema.ts';
+
+const pluginDispatcherSchema = z.object({
+    __pluginId: z.string(),
+});
 
 /**
- * Runtime half of the dispatcher. No validation — that happens at build time
- * (see the build-time collector). `ids` is the build-validated set,
- * inlined into the generated entry as a literal. Handlers themselves can't be
- * serialized to code, so they ride in via the imported `plugin`.
+ * Runtime dispatcher. Idea is to expose a single API which wrapper the function call
  */
 export const createRuntimeDispatcher = (plugin: OpenIgaPlugin<any>) => {
-    // Extism export contract: no args, returns I32 (0 = ok, 1 = error).
-    // Input via Host.inputString(); output via Host.outputString().
-    return (): 0 | 1 => {
+    // Extism export contract: no args, returns I32 (0 = ok, 1 = error). The host
+    // awaits the returned promise before reading the I32. Input via
+    // Host.inputString(); output via Host.outputString().
+    return async (): Promise<0 | 1> => {
         try {
-            const { id } = JSON.parse(Host.inputString() || '{}') as { id?: string };
-            const action = id ? plugin.registry.get(id) : undefined;
+            const hostInput = JSON.parse(Host.inputString());
+
+            const { __pluginId } = z.parse(pluginDispatcherSchema, hostInput);
+            const action = plugin.registry.get(__pluginId);
             if (!action) {
-                Host.outputString(JSON.stringify({ error: `No account action registered for "${id}"` }));
+                Host.outputString(JSON.stringify({ error: `No account action registered for "${__pluginId}"` }));
                 return 1;
             }
 
+            const { input, output } = handlerInputOutputSchema[action.type];
+
+            const parsedInput = z.parse(input, hostInput);
             const pluginConfig = buildConfig(plugin.settings.config);
             const actionConfig = action.config ? buildConfig(action.config) : {};
             const config = { ...pluginConfig, ...actionConfig };
 
-            return action.handler({ config });
+            const result = await action.handler({ config, input: parsedInput });
+
+            const parsedResult = z.parse(output, result);
+
+            Host.outputString(JSON.stringify(parsedResult));
+            return 0;
         } catch (error) {
             Host.outputString(JSON.stringify({ error: String(error) }));
             return 1;
