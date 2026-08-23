@@ -8,7 +8,7 @@ import { Logger } from '../utils/logger.ts';
 const log = new Logger('wasm');
 
 const ULEB128_LSB = 0x7f;
-const ULEB256_MSB = 0x80;
+const ULEB128_MSB = 0x80;
 
 const CUSTOM_SECTION_NAME = 'openiga:manifest';
 const CUSTOM_SECTION_ID = 0x00;
@@ -28,7 +28,7 @@ const CUSTOM_SECTION_ID = 0x00;
  * Notes:
  * 0x7f = LSB 127 (0111 1111)
  * 0x80 = MSB 128 (1000 0000)
- * Right shift factor: 7. Factor is 7 instead of 8 since the 8th bit used as traffic light for encoding
+ * Right shift factor: 7
  * */
 const uleb128Encoder = (input: number): number[] => {
     const out: number[] = [];
@@ -36,7 +36,7 @@ const uleb128Encoder = (input: number): number[] => {
         let b = input & ULEB128_LSB;
         input >>>= 7;
         if (input !== 0) {
-            b |= ULEB256_MSB;
+            b |= ULEB128_MSB;
         }
         out.push(b);
     } while (input !== 0);

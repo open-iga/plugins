@@ -22,7 +22,7 @@ export type AccountAction<
     handler: (context: {
         // Plugin-level and action-level config, both resolved and merged.
         input: z.infer<(typeof handlerInputOutputSchema)[Type]['input']>;
-        config: SimplifiedRuntimeConfig<RuntimeConfig<Config> & RuntimeConfig<ActionConfig>>;
+        config: Readonly<SimplifiedRuntimeConfig<RuntimeConfig<Config> & RuntimeConfig<ActionConfig>>>;
     }) =>
         | z.infer<(typeof handlerInputOutputSchema)[Type]['output']>
         | Promise<z.infer<(typeof handlerInputOutputSchema)[Type]['output']>>;

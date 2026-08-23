@@ -29,7 +29,7 @@ export const createRuntimeDispatcher = (plugin: OpenIgaPlugin<any>) => {
             const parsedInput = z.parse(input, hostInput);
             const pluginConfig = buildConfig(plugin.settings.config);
             const actionConfig = action.config ? buildConfig(action.config) : {};
-            const config = { ...pluginConfig, ...actionConfig };
+            const config = Object.freeze({ ...pluginConfig, ...actionConfig });
 
             const result = await action.handler({ config, input: parsedInput });
 
