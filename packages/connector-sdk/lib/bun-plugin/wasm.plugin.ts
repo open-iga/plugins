@@ -18,7 +18,7 @@ const CUSTOM_SECTION_ID = 0x00;
  * Design: https://github.com/WebAssembly/design/discussions/1533
  *
  * Encoding:
- *  - Extract lowest seven bits -> Perform Bitwise AND between LSB and the input
+ *  - Extract the lowest seven bits -> Perform Bitwise AND between LSB and the input
  *  - Right shift the input by 7 (since Base 128 = 2^7)
  *  - If the input is not Zero, perform bitwise OR between the input and MSB
  *  - Repeat the above the until the input becomes zero
@@ -99,7 +99,7 @@ const compileToWasm = ({
     wasmFilePath: string;
     newBundlePath: string;
 }) => {
-    // 1. Validate codegen produced what we need.
+    // Validate codegen produced artifacts
     const missing = [emittedBundlePath, dtsFilePath].filter((file) => !existsSync(file));
     if (missing.length > 0) {
         throw new Error(
@@ -108,13 +108,13 @@ const compileToWasm = ({
         );
     }
 
-    // 2. Ensure extism-js is available.
+    // Ensure extism-js is available.
     const extism = Bun.which('extism-js');
     if (!extism) {
         throw new Error('wasm: `extism-js` not found on PATH. Install it — https://github.com/extism/js-pdk');
     }
 
-    // 3. Rename JS to <pluginName>.js, then compile.
+    // Rename JS to <pluginName>.js, then compile.
     renameSync(emittedBundlePath, newBundlePath);
     log.info('compiling', path.basename(newBundlePath), '→', path.basename(wasmFilePath));
     const proc = Bun.spawnSync([extism, newBundlePath, '-i', dtsFilePath, '-o', wasmFilePath]);

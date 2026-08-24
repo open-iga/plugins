@@ -16,12 +16,15 @@
             "types": "./lib/internals.ts",
             "bun": "./lib/internals.ts",
             "default": "./lib/internals.ts"
-        }
+        },
+        "./tsconfig.connector.json": "./tsconfig.connector.json"
     },
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "dependencies": {
+        "@noble/hashes": "catalog:",
+        "node-fetch-native": "catalog:",
         "zod": "catalog:"
     },
     "devDependencies": {
