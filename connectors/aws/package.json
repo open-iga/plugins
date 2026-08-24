@@ -1,0 +1,16 @@
+{
+    "name": "aws",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "open-iga build --entryPoint src/aws-plugin.ts"
+    },
+    "dependencies": {
+        "@open-iga/connector-sdk": "workspace:*",
+        "aws4fetch": "catalog:",
+        "fast-xml-parser": "catalog:"
+    },
+    "devDependencies": {
+        "typescript": "catalog:"
+    }
+}
