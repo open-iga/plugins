@@ -1,10 +1,11 @@
-import type { PluginAccountAction } from '../validation-schema/plugin.account-action.schema.ts';
-import type { PluginConfig } from '../validation-schema/plugin.config.schema.ts';
-import type { handlerInputOutputSchema } from '../validation-schema/plugin.account-action-handler.schema.ts';
+import type { PluginAccountAction } from './validation-schema/plugin.account-action.schema.ts';
+import type { PluginConfig } from './validation-schema/plugin.config.schema.ts';
+import type { handlerInputOutputSchema } from './validation-schema/plugin.account-action-handler.schema.ts';
 import type * as z from 'zod/mini';
+import type { PluginSettings } from './validation-schema/plugin.settings.ts';
 
 type SimplifiedRuntimeConfig<Type> = { [Property in keyof Type]: Type[Property] };
-type RuntimeConfig<Config extends PluginConfig = PluginConfig> = SimplifiedRuntimeConfig<
+export type RuntimeConfig<Config extends PluginConfig = PluginConfig> = SimplifiedRuntimeConfig<
     {
         [Key in Extract<Config[number], { required: true }>['name']]: string;
     } & {
@@ -33,16 +34,19 @@ export class OpenIgaPlugin<const Config extends PluginConfig> {
     readonly registry = new Map<string, AccountAction<Config, PluginConfig>>();
     private readonly accountActionDelimiter = '.account-action.';
 
-    // TODO: validate setting with validation schema
-    constructor(readonly settings: { name: string; description: string; config: Config }) {}
+    constructor(readonly settings: Omit<PluginSettings, 'config'> & { config: Config }) {}
 
     registerAccountActions<const ActionConfig extends PluginConfig = []>(
         managedResource: string,
         action: AccountAction<Config, ActionConfig>,
     ) {
-        this.registry.set(`${managedResource}${this.accountActionDelimiter}${action.type}`, action);
+        this.registry.set(this.createAccountActionId(managedResource, action.type), action);
 
         return this;
+    }
+
+    createAccountActionId(managedResource: string, type: AccountAction['type']) {
+        return `${managedResource}${this.accountActionDelimiter}${type}`;
     }
 
     getAccountActionsDetails = (name: string): [string, string] => {

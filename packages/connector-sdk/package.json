@@ -17,14 +17,19 @@
             "bun": "./lib/internals.ts",
             "default": "./lib/internals.ts"
         },
+        "./test": {
+            "types": "./lib/test.ts",
+            "bun": "./lib/test.ts",
+            "default": "./lib/test.ts"
+        },
         "./tsconfig.connector.json": "./tsconfig.connector.json"
     },
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "dependencies": {
+        "@extism/extism": "catalog:",
         "@noble/hashes": "catalog:",
-        "node-fetch-native": "catalog:",
         "zod": "catalog:"
     },
     "devDependencies": {

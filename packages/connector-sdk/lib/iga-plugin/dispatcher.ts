@@ -1,6 +1,6 @@
 import type { OpenIgaPlugin } from './plugin.ts';
 import * as z from 'zod/mini';
-import { handlerInputOutputSchema } from '../validation-schema/plugin.account-action-handler.schema.ts';
+import { handlerInputOutputSchema } from './validation-schema/plugin.account-action-handler.schema.ts';
 import { installRuntimePolyfills } from '../polyfills/installer.ts';
 import { buildConfig } from '../utils/config.ts';
 

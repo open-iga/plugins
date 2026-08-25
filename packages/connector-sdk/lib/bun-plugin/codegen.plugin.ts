@@ -1,10 +1,11 @@
 import type { BunPlugin } from 'bun';
 import * as path from 'node:path';
 import { OUT_DIR, type BuildContext } from '../cli/build.ts';
-import type * as z from 'zod/mini';
-import { pluginAccountActionSchema } from '../validation-schema/plugin.account-action.schema.ts';
+import * as z from 'zod/mini';
+import { pluginAccountActionSchema } from '../iga-plugin/validation-schema/plugin.account-action.schema.ts';
 import { OpenIgaPlugin } from '../iga-plugin/plugin.ts';
-import type { PluginConfig } from '../validation-schema/plugin.config.schema.ts';
+import type { PluginConfig } from '../iga-plugin/validation-schema/plugin.config.schema.ts';
+import { pluginSettingsSchema } from '../iga-plugin/validation-schema/plugin.settings.ts';
 
 /**
  * Virtual id used as the Bun.build entrypoint. Not a real file — the codegen plugin
@@ -22,6 +23,7 @@ type Manifest = {
     name: string;
     description: string;
     config: PluginConfig;
+    allowedDomains: string[];
     actions: ({ id: string } & Pick<
         z.infer<typeof pluginAccountActionSchema>,
         'description' | 'endpoints' | 'config'
@@ -37,17 +39,21 @@ const validateAndGeneratePluginManifest = (plugin: unknown): Manifest => {
         throw new Error(`Default export should be an instance of ${OpenIgaPlugin.name}`);
     }
 
-    const { name, config, description } = plugin.settings;
-    const manifest: Manifest = { name, description, config, actions: [] };
+    const settingsResult = z.safeParse(pluginSettingsSchema, plugin.settings);
+    if (!settingsResult.success) {
+        throw new Error(`Validation Failed for Plugin setting. Reason: ${z.prettifyError(settingsResult.error)}`);
+    }
+
+    const { name, config, description, allowedDomains } = settingsResult.data;
+    const manifest: Manifest = { name, description, config, allowedDomains, actions: [] };
 
     [...plugin.registry].forEach(([name, action]) => {
         const [managedResource, actionName] = plugin.getAccountActionsDetails(name);
 
         const result = pluginAccountActionSchema.safeParse(action);
         if (!result.success) {
-            const reason = result.error.issues.map((issue) => issue.message).join('; ');
             throw new Error(
-                `Validation failed for action type ${actionName} in the managed resource ${managedResource}. Reason: ${reason}`,
+                `Validation failed for action type ${actionName} in the managed resource ${managedResource}. Reason: ${z.prettifyError(result.error)}`,
             );
         }
 
