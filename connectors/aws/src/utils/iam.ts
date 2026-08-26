@@ -27,7 +27,7 @@ export async function createUser({ endpoint, credentials, region, userName }: Cr
         params: { UserName: userName },
     });
 
-    const userId = res.get('UserId');
+    const userId = res.get('Arn');
     if (!userId) {
         throw new Error('CreateUser response missing UserId');
     }

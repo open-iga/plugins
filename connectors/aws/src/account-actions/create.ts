@@ -6,7 +6,10 @@ export const registerAccountActionCreation = (plugin: typeof awsPlugin) => {
     plugin.registerAccountActions('iam-user', {
         type: 'create',
         description: 'IAM User account creation',
-        endpoints: [],
+        endpoints: [
+            { method: 'POST', url: 'https://sts.{{AWS_REION}}.amazonaws.com/', description: 'STS endpoint URL' },
+            { method: 'POST', url: 'https://iam.amazonaws.com/', description: 'STS endpoint URL' },
+        ],
         config: [
             {
                 name: 'AWS_USER_CREATION_ROLE',
@@ -17,8 +20,8 @@ export const registerAccountActionCreation = (plugin: typeof awsPlugin) => {
         handler: async ({ config, input }) => {
             const region = config.AWS_REGION ?? 'us-east-1';
 
-            const stsEndpoint = config.AWS_ENDPOINT_URL ?? `https://sts.${region}.amazonaws.com`;
-            const iamEndpoint = config.AWS_ENDPOINT_URL ?? 'https://iam.amazonaws.com';
+            const stsEndpoint = `https://sts.${region}.amazonaws.com`;
+            const iamEndpoint = 'https://iam.amazonaws.com';
 
             const assumed = await assumeRole({
                 endpoint: stsEndpoint,

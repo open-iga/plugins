@@ -3,14 +3,18 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "open-iga build --entryPoint src/aws-plugin.ts"
+        "compile": "open-iga compile --entryPoint src/aws-plugin.ts",
+        "test": "bun run compile && bun test",
+        "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.test.json"
     },
     "dependencies": {
-        "@open-iga/connector-sdk": "workspace:*",
         "aws4fetch": "catalog:",
         "fast-xml-parser": "catalog:"
     },
     "devDependencies": {
+        "@open-iga/connector-sdk": "workspace:*",
+        "@types/bun": "catalog:",
+        "bun-types": "catalog:",
         "typescript": "catalog:"
     }
 }
