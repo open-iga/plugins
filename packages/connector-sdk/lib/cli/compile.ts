@@ -11,7 +11,7 @@ export type BuildContext = {
 
 export const OUT_DIR = '.open-iga';
 
-export const build = async ({ entryPoint }: { entryPoint?: string }) => {
+export const compile = async ({ entryPoint }: { entryPoint?: string }) => {
     if (!entryPoint) {
         throw new Error('Missing --entryPoint');
     }

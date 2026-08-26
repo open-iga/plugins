@@ -1,5 +1,3 @@
-import { ConfigError } from './error.ts';
-
 export const logger = {
     info: (...args: any) => console.log(...args),
     warn: (...args: any) => console.warn(...args),
@@ -25,16 +23,3 @@ export class Logger {
         console.error(this.prefix, ...args);
     }
 }
-
-/**
- * There is no process in QuickJS. This is a wrapper to get host provided config
- */
-export const getConfig = (key: string, required: true): string | null => {
-    const value = Config.get(key);
-
-    if (required && !value) {
-        throw new ConfigError(`Env var ${key} is marked required. But is missing in the Host config.`);
-    }
-
-    return value;
-};

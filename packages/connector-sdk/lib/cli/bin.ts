@@ -2,7 +2,7 @@
 
 import { logger } from '../utils/logger.ts';
 import { parseArgs } from 'node:util';
-import { build } from './build.ts';
+import { compile } from './compile.ts';
 
 const { values, positionals } = parseArgs({
     args: process.argv.slice(2),
@@ -13,7 +13,7 @@ const { values, positionals } = parseArgs({
 });
 
 const commands: { [key: string]: (cliValues: typeof values) => Promise<void> } = {
-    build,
+    compile,
 };
 
 const main = () => {

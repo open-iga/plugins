@@ -1,11 +1,7 @@
 import type { BunPlugin } from 'bun';
 import * as path from 'node:path';
-import { OUT_DIR, type BuildContext } from '../cli/build.ts';
-import * as z from 'zod/mini';
-import { pluginAccountActionSchema } from '../iga-plugin/validation-schema/plugin.account-action.schema.ts';
-import { OpenIgaPlugin } from '../iga-plugin/plugin.ts';
-import type { PluginConfig } from '../iga-plugin/validation-schema/plugin.config.schema.ts';
-import { pluginSettingsSchema } from '../iga-plugin/validation-schema/plugin.settings.ts';
+import { OUT_DIR, type BuildContext } from '../cli/compile.ts';
+import { validateAndGeneratePluginManifest } from './validation/manifest.ts';
 
 /**
  * Virtual id used as the Bun.build entrypoint. Not a real file — the codegen plugin
@@ -18,51 +14,6 @@ const staticTypeFile = `
         export function dispatch(): I32
     }
 `;
-
-type Manifest = {
-    name: string;
-    description: string;
-    config: PluginConfig;
-    allowedDomains: string[];
-    actions: ({ id: string } & Pick<
-        z.infer<typeof pluginAccountActionSchema>,
-        'description' | 'endpoints' | 'config'
-    >)[];
-};
-
-/**
- * There are two levels of validation: build and runtime
- * Build-time validates the registry. Runtime is part of dispatcher that sits between the host and the plugin
- * */
-const validateAndGeneratePluginManifest = (plugin: unknown): Manifest => {
-    if (!(plugin instanceof OpenIgaPlugin)) {
-        throw new Error(`Default export should be an instance of ${OpenIgaPlugin.name}`);
-    }
-
-    const settingsResult = z.safeParse(pluginSettingsSchema, plugin.settings);
-    if (!settingsResult.success) {
-        throw new Error(`Validation Failed for Plugin setting. Reason: ${z.prettifyError(settingsResult.error)}`);
-    }
-
-    const { name, config, description, allowedDomains } = settingsResult.data;
-    const manifest: Manifest = { name, description, config, allowedDomains, actions: [] };
-
-    [...plugin.registry].forEach(([name, action]) => {
-        const [managedResource, actionName] = plugin.getAccountActionsDetails(name);
-
-        const result = pluginAccountActionSchema.safeParse(action);
-        if (!result.success) {
-            throw new Error(
-                `Validation failed for action type ${actionName} in the managed resource ${managedResource}. Reason: ${z.prettifyError(result.error)}`,
-            );
-        }
-
-        const { endpoints, description, config } = result.data;
-        manifest.actions.push({ id: name, endpoints, description, config: config ?? [] });
-    });
-
-    return manifest;
-};
 
 /**
  * Codegen exposes a single entry point that acts as a dispatcher which host invokes
@@ -94,10 +45,9 @@ export const codegenPlugin = (authorEntryPath: string, ctx: BuildContext): BunPl
             };
         });
 
-        // Written here in setup since both the manifest and the .d.ts are
-        // fully known before the build runs and don't depend on the newBundlePath output.
-        // The wasm plugin's onEnd reads the .d.ts, so producing it up front avoids
-        // racing that hook (onEnd callbacks across plugins aren't ordered).
+        // Since both the manifest and the .d.ts are fully known before the build runs and
+        // don't depend on the newBundlePath output. The wasm plugin's onEnd reads the .d.ts,
+        // so producing it up front avoids racing that hook (onEnd callbacks across plugins aren't ordered).
         await Bun.write(path.join(OUT_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2));
         await Bun.write(path.join(OUT_DIR, `${pluginName}.d.ts`), staticTypeFile);
     },

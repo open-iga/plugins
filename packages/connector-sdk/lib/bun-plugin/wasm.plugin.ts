@@ -1,7 +1,7 @@
 import type { BunPlugin } from 'bun';
 import * as path from 'node:path';
 import { existsSync, renameSync } from 'node:fs';
-import { OUT_DIR, type BuildContext } from '../cli/build.ts';
+import { OUT_DIR, type BuildContext } from '../cli/compile.ts';
 import { VIRTUAL_ENTRY } from './codegen.plugin.ts';
 import { Logger } from '../utils/logger.ts';
 
