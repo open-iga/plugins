@@ -5,7 +5,6 @@
     "": {
       "name": "@open-iga/plugins",
       "devDependencies": {
-        "@extism/extism": "2.0.0-rc13",
         "@extism/js-pdk": "catalog:",
         "oxfmt": "catalog:",
         "oxlint": "catalog:",
@@ -18,11 +17,11 @@
     "connectors/aws": {
       "name": "aws",
       "dependencies": {
-        "@open-iga/connector-sdk": "workspace:*",
         "aws4fetch": "catalog:",
         "fast-xml-parser": "catalog:",
       },
       "devDependencies": {
+        "@open-iga/connector-sdk": "workspace:*",
         "@types/bun": "catalog:",
         "bun-types": "catalog:",
         "typescript": "catalog:",
@@ -35,15 +34,18 @@
         "open-iga": "lib/cli/bin.ts",
       },
       "dependencies": {
+        "@extism/extism": "catalog:",
         "@noble/hashes": "catalog:",
         "zod": "catalog:",
       },
       "devDependencies": {
         "@types/bun": "catalog:",
+        "bun-types": "catalog:",
       },
     },
   },
   "catalog": {
+    "@extism/extism": "2.0.0-rc13",
     "@extism/js-pdk": "1.1.1",
     "@noble/hashes": "2.2.0",
     "@types/bun": "1.4.0",

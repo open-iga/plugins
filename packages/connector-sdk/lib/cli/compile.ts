@@ -27,6 +27,7 @@ export const compile = async ({ entryPoint }: { entryPoint?: string }) => {
         outdir: OUT_DIR,
         format: 'cjs',
         target: 'browser',
+        minify: true,
         plugins: [codegenPlugin(entryPoint, buildContext), wasmPlugin(buildContext)],
     });
 };

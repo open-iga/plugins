@@ -12,6 +12,7 @@ const prettyZodError = (error: z.core.$ZodError) => z.prettifyError(error);
 
 /**
  * Runtime dispatcher. Idea is to expose a single API which wrapper the function call
+ * TODO: Return error code from the dispatcher for the Host to categorize
  */
 export const createRuntimeDispatcher = (plugin: OpenIgaPlugin<any>) => {
     // Guarantee the runtime globals connectors rely on (Request, WebCrypto HMAC).

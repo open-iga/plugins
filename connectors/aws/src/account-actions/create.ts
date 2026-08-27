@@ -7,7 +7,7 @@ export const registerAccountActionCreation = (plugin: typeof awsPlugin) => {
         type: 'create',
         description: 'IAM User account creation',
         endpoints: [
-            { method: 'POST', url: 'https://sts.{{AWS_REION}}.amazonaws.com/', description: 'STS endpoint URL' },
+            { method: 'POST', url: 'https://sts.{{AWS_REGION}}.amazonaws.com/', description: 'STS endpoint URL' },
             { method: 'POST', url: 'https://iam.amazonaws.com/', description: 'STS endpoint URL' },
         ],
         config: [

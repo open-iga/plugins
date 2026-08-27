@@ -27,7 +27,7 @@ type Manifest = {
  * Every config placeholder in the URL must be defined as required in the config
  * (e.g.) For http:abc.{{domain}}.com, config `domain` must be mentioned as required in the config
  * */
-const validateConfigPlaceHolder = ({
+export const validateConfigPlaceHolder = ({
     endpoints,
     config,
 }: {
