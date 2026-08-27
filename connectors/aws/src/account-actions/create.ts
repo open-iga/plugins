@@ -36,13 +36,12 @@ export const registerAccountActionCreation = (plugin: typeof awsPlugin) => {
 
             const created = await createUser({
                 endpoint: iamEndpoint,
-                region,
                 credentials: assumed,
                 userName: input.email,
             });
 
             return {
-                id: created.userId,
+                id: created.arn,
             };
         },
     });

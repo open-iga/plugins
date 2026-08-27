@@ -1,15 +1,17 @@
 import * as z from 'zod/mini';
 
+const metadataSchema = z.optional(z.record(z.string(), z.json()));
+
 const creationHandlerInputSchema = z.object({
     email: z.email(),
     firstname: z.string(),
     lastname: z.string(),
-    metadata: z.optional(z.record(z.string(), z.unknown())),
+    metadata: metadataSchema,
 });
 
 const creationHandlerOutputSchema = z.object({
     id: z.string(),
-    metadata: z.optional(z.record(z.string(), z.unknown())),
+    metadata: metadataSchema,
 });
 
 export const handlerInputOutputSchema = {

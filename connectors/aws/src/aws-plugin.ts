@@ -17,7 +17,6 @@ export const awsPlugin = new OpenIgaPlugin({
                 'Base secret access key used to call STS. Handler level roles are assumed with this access key.',
             required: true,
         },
-        { name: 'AWS_ENDPOINT_URL', description: 'Override AWS endpoint (e.g. a local emulator)', required: false },
     ],
     allowedDomains: ['*.amazonaws.com'],
 });

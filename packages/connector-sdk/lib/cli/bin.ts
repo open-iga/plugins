@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
 
-import { logger } from '../utils/logger.ts';
 import { parseArgs } from 'node:util';
 import { compile } from './compile.ts';
 
@@ -19,14 +18,12 @@ const commands: { [key: string]: (cliValues: typeof values) => Promise<void> } =
 const main = () => {
     const userCommand = positionals[0];
     if (!userCommand) {
-        logger.error('Missing command');
-        return;
+        throw new Error('Missing command');
     }
 
     const command = commands[userCommand];
     if (!command) {
-        logger.error(`Invalid command: ${userCommand}. Supported commands: ${Object.keys(commands).join(', ')}`);
-        return;
+        throw new Error(`Invalid command: ${userCommand}. Supported commands: ${Object.keys(commands).join(', ')}`);
     }
 
     command(values);

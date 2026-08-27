@@ -12,7 +12,6 @@ describe('account-actions.create', () => {
                 AWS_REGION: 'us-east-1',
                 AWS_ACCESS_KEY_ID: 'test',
                 AWS_SECRET_ACCESS_KEY: 'test',
-                AWS_ENDPOINT_URL: process.env.AWS_ENDPOINT_URL ?? '',
                 AWS_USER_CREATION_ROLE: 'arn:aws:iam::000000000000:role/openiga-user-creation',
             },
             mockUpstream: process.env.FLOCI_ENDPOINT_URL ?? '',
@@ -57,33 +56,42 @@ describe('account-actions.create', () => {
         }
     });
 
-    // it('rejects invalid input before reaching the upstream', async () => {
-    //     const result = await host.callAccountActions('iam-user', 'create', {
-    //         email: 'not-an-email',
-    //         firstname: 'Foo',
-    //         lastname: 'Bar',
-    //     });
-    //
-    //     expect(result.ok).toBe(false);
-    //     if (!result.ok) {
-    //         expect(result.error).toContain('validation');
-    //     }
-    // });
-    //
-    // it('fails when a required action config is missing', async () => {
-    //     const hostWithoutRole = await createMockedHost(awsPlugin, pluginConfig(), {}, { allowedDomainsInTest: ['localhost'] });
-    //
-    //     const result = await hostWithoutRole.callAccountActions('iam-user', 'create', {
-    //         email: 'no-role@openiga.dev',
-    //         firstname: 'Foo',
-    //         lastname: 'Bar',
-    //     });
-    //
-    //     expect(result.ok).toBe(false);
-    //     if (!result.ok) {
-    //         expect(result.error).toContain('AWS_USER_CREATION_ROLE');
-    //     }
-    //
-    //     await hostWithoutRole.close();
-    // });
+    it('should reject invalid input before calling the upstream', async () => {
+        const result = await host.callAccountActions('iam-user', 'create', {
+            email: 'not-an-email',
+            firstname: 'Foo',
+            lastname: 'Bar',
+        });
+
+        expect(result.ok).toBe(false);
+        if (!result.ok) {
+            expect(result.error).toContain('validation');
+        }
+    });
+
+    it('should fail when a required action config is missing', async () => {
+        const hostWithoutRole = await createMockedHost({
+            plugin: awsPlugin,
+            config: {
+                AWS_REGION: 'us-east-1',
+                AWS_ACCESS_KEY_ID: 'test',
+                AWS_SECRET_ACCESS_KEY: 'test',
+                // AWS_USER_CREATION_ROLE intentionally omitted
+            },
+            mockUpstream: process.env.FLOCI_ENDPOINT_URL ?? '',
+        });
+
+        const result = await hostWithoutRole.callAccountActions('iam-user', 'create', {
+            email: 'no-role@openiga.dev',
+            firstname: 'Foo',
+            lastname: 'Bar',
+        });
+
+        expect(result.ok).toBe(false);
+        if (!result.ok) {
+            expect(result.error).toContain('AWS_USER_CREATION_ROLE');
+        }
+
+        await hostWithoutRole.close();
+    });
 });
