@@ -1,0 +1,8 @@
+{
+    "extends": "../../tsconfig.json",
+    "include": ["lib"],
+    "compilerOptions": {
+        "types": ["bun", "bun-types/test-globals"]
+    },
+    "files": ["extism-jspdk.d.ts"]
+}

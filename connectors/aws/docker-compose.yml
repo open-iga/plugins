@@ -1,0 +1,22 @@
+services:
+    floci:
+        image: floci/floci:1.7.0-compat
+        tty: true
+        ports:
+            - '4566:4566'
+        environment:
+            FLOCI_STORAGE_MODE: memory # only for local testing so memory is fine instead of hybrid
+
+    stackport:
+        image: davireis/stackport:latest
+        ports:
+            - '8080:8080'
+        environment:
+            AWS_ENDPOINT_URL: http://floci:4566
+            AWS_REGION: us-east-1
+            AWS_ACCESS_KEY_ID: test
+            AWS_SECRET_ACCESS_KEY: test
+        restart: unless-stopped
+        depends_on:
+            floci:
+                condition: service_started

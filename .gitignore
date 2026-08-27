@@ -24,7 +24,6 @@ coverage
 # Build Outputs
 .next/
 out/
-build
 dist
 
 
@@ -38,3 +37,6 @@ yarn-error.log*
 *.pem
 
 .idea
+
+# open-iga dist
+.open-iga

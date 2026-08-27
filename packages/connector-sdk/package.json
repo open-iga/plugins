@@ -1,0 +1,39 @@
+{
+    "name": "@open-iga/connector-sdk",
+    "version": "0.0.1",
+    "description": "A wrapper around the toolchain to provide a seamless DX for plugin development",
+    "bin": {
+        "open-iga": "lib/cli/bin.ts"
+    },
+    "type": "module",
+    "exports": {
+        ".": {
+            "types": "./lib/index.ts",
+            "bun": "./lib/index.ts",
+            "default": "./lib/index.ts"
+        },
+        "./internals": {
+            "types": "./lib/internals.ts",
+            "bun": "./lib/internals.ts",
+            "default": "./lib/internals.ts"
+        },
+        "./test": {
+            "types": "./lib/test.ts",
+            "bun": "./lib/test.ts",
+            "default": "./lib/test.ts"
+        },
+        "./tsconfig.connector.json": "./tsconfig.connector.json"
+    },
+    "scripts": {
+        "test": "bun test"
+    },
+    "dependencies": {
+        "@extism/extism": "catalog:",
+        "@noble/hashes": "catalog:",
+        "zod": "catalog:"
+    },
+    "devDependencies": {
+        "@types/bun": "catalog:",
+        "bun-types": "catalog:"
+    }
+}

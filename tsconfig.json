@@ -1,24 +1,25 @@
 {
-  "compilerOptions": {
-    "module": "nodenext",
-    "target": "esnext",
-    "moduleResolution": "bundler",
-    "types": ["@extism/js-pdk"],
+    "compilerOptions": {
+        "target": "esnext",
+        "moduleResolution": "bundler",
+        "module": "preserve",
 
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+        "noUncheckedIndexedAccess": true,
+        "exactOptionalPropertyTypes": true,
 
-    "allowImportingTsExtensions": true,
-     "noUnusedLocals": true,
-     "noUnusedParameters": true,
-     "noFallthroughCasesInSwitch": true,
+        "noEmit": true,
+        "allowImportingTsExtensions": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true,
 
-    "strict": true,
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-    "skipLibCheck": true
-  },
-  "include": ["packages/**", "plugins/**"]
+        "strict": true,
+        "verbatimModuleSyntax": true,
+        "isolatedModules": true,
+        "noUncheckedSideEffectImports": true,
+        "moduleDetection": "force",
+        "skipLibCheck": true,
+
+        "lib": ["ES2023"]
+    }
 }

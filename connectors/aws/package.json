@@ -1,0 +1,21 @@
+{
+    "name": "aws",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "compile": "open-iga compile --entryPoint src/aws-plugin.ts",
+        "test": "bun run compile && bun test",
+        "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.test.json"
+    },
+    "dependencies": {
+        "aws4fetch": "catalog:",
+        "fast-xml-parser": "catalog:"
+    },
+    "devDependencies": {
+        "@open-iga/connector-sdk": "workspace:*",
+        "@types/bun": "catalog:",
+        "bun-types": "catalog:",
+        "testcontainers": "catalog:",
+        "typescript": "catalog:"
+    }
+}
