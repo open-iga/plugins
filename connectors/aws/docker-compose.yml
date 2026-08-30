@@ -4,8 +4,6 @@ services:
         tty: true
         ports:
             - '4566:4566'
-        # MiniStack is in-memory by default (ephemeral), which is what we want for local testing;
-        # persistence is opt-in (e.g. S3_PERSIST) and intentionally left off here.
 
     stackport:
         image: davireis/stackport:latest
