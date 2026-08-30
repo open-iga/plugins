@@ -1,17 +1,26 @@
 import type { BunPlugin } from 'bun';
 import * as path from 'node:path';
 import { OUT_DIR, type BuildContext } from '../cli/compile.ts';
-import { validateAndGeneratePluginManifest } from './validation/manifest.ts';
+import { validateAndGenerateConnectorManifest } from './validation/manifest.ts';
 
 /**
  * Virtual id used as the Bun.build entrypoint. Not a real file — the codegen plugin
  * below intercepts it and generates its source in memory.
  */
-export const VIRTUAL_ENTRY = 'openiga-plugin';
+export const VIRTUAL_ENTRY = 'openiga-connector';
 
+// extism-js reads this interface file to know the guest's export (dispatch) and the
+// Host capability imports it must wire. Every host function a connector may call has to be
+// declared here or the import stays unresolved and the wasm fails to instantiate.
 const staticTypeFile = `
     declare module 'main' {
         export function dispatch(): I32
+    }
+
+    declare module 'extism:host' {
+        interface user {
+            sendEmail(offset: I64): I64
+        }
     }
 `;
 
@@ -23,10 +32,10 @@ export const codegenPlugin = (authorEntryPath: string, ctx: BuildContext): BunPl
     async setup(build) {
         const authorAbs = path.resolve(authorEntryPath);
         const mod = await import(authorAbs);
-        const manifest = validateAndGeneratePluginManifest(mod.default);
+        const manifest = validateAndGenerateConnectorManifest(mod.default);
 
-        const pluginName = manifest.name;
-        ctx.pluginName = pluginName;
+        const connectorName = manifest.name;
+        ctx.connectorName = connectorName;
 
         build.onResolve({ filter: new RegExp(`^${VIRTUAL_ENTRY}$`) }, () => ({
             path: VIRTUAL_ENTRY,
@@ -37,9 +46,9 @@ export const codegenPlugin = (authorEntryPath: string, ctx: BuildContext): BunPl
             return {
                 loader: 'ts',
                 contents: [
-                    `import plugin from ${JSON.stringify(authorAbs)};`,
+                    `import connector from ${JSON.stringify(authorAbs)};`,
                     `import { createRuntimeDispatcher } from '@open-iga/connector-sdk/internals';`,
-                    `const _dispatch = createRuntimeDispatcher(plugin);`,
+                    `const _dispatch = createRuntimeDispatcher(connector);`,
                     `export function dispatch() { return _dispatch(); }`,
                 ].join('\n'),
             };
@@ -49,6 +58,6 @@ export const codegenPlugin = (authorEntryPath: string, ctx: BuildContext): BunPl
         // don't depend on the newBundlePath output. The wasm plugin's onEnd reads the .d.ts,
         // so producing it up front avoids racing that hook (onEnd callbacks across plugins aren't ordered).
         await Bun.write(path.join(OUT_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2));
-        await Bun.write(path.join(OUT_DIR, `${pluginName}.d.ts`), staticTypeFile);
+        await Bun.write(path.join(OUT_DIR, `${connectorName}.d.ts`), staticTypeFile);
     },
 });

@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'bun:test';
-import { validateConfigPlaceHolder, validateAndGeneratePluginManifest } from './manifest.ts';
-import { OpenIgaPlugin } from '../../iga-plugin/plugin.ts';
-import type { PluginConfig } from '../../iga-plugin/validation-schema/plugin.config.schema.ts';
-import type { PluginAccountAction } from '../../iga-plugin/validation-schema/plugin.account-action.schema.ts';
+import { validateConfigPlaceHolder, validateAndGenerateConnectorManifest } from './manifest.ts';
+import { OpenIgaConnector } from '../../iga/connector/builder.ts';
+import type { ConnectorConfig } from '../../iga/connector/validation-schema/connector.config.schema.ts';
+import type { PluginAccountAction } from '../../iga/connector/validation-schema/connector.account-action.schema.ts';
 
-const config = (entries: { name: string; required: boolean }[]): PluginConfig =>
+const config = (entries: { name: string; required: boolean }[]): ConnectorConfig =>
     entries.map(({ name, required }) => ({ name, description: name, required }));
 
 const endpoints = (urls: string[]): PluginAccountAction['endpoints'] =>
@@ -48,13 +48,13 @@ describe('validateConfigPlaceHolder', () => {
     });
 });
 
-describe('validateAndGeneratePluginManifest', () => {
-    it('should throw error when the default export is not a plugin instance', () => {
-        expect(() => validateAndGeneratePluginManifest({})).toThrow(/should be an instance of OpenIgaPlugin/);
+describe('validateAndGenerateConnectorManifest', () => {
+    it('should throw error when the default export is not a connector instance', () => {
+        expect(() => validateAndGenerateConnectorManifest({})).toThrow(/should be an instance of OpenIgaConnector/);
     });
 
-    it('should throw error when plugin settings is invalid', () => {
-        const plugin = new OpenIgaPlugin({
+    it('should throw error when connector settings is invalid', () => {
+        const connector = new OpenIgaConnector({
             // Invalid: name must be a non-empty string
             name: '',
             description: 'desc',
@@ -62,12 +62,12 @@ describe('validateAndGeneratePluginManifest', () => {
             allowedDomains: ['domain.com'],
         });
 
-        expect(() => validateAndGeneratePluginManifest(plugin)).toThrow(/Validation Failed for Plugin setting/);
+        expect(() => validateAndGenerateConnectorManifest(connector)).toThrow(/Validation Failed for Plugin setting/);
     });
 
-    it('should throw error when plugin action details are invalid', () => {
-        const plugin = new OpenIgaPlugin({
-            name: 'plugin',
+    it('should throw error when connector action details are invalid', () => {
+        const connector = new OpenIgaConnector({
+            name: 'connector',
             description: 'desc',
             config: [{ name: 'REGION', description: 'region', required: true }],
             allowedDomains: ['domain.com'],
@@ -79,14 +79,14 @@ describe('validateAndGeneratePluginManifest', () => {
             handler: () => ({}) as never,
         });
 
-        expect(() => validateAndGeneratePluginManifest(plugin)).toThrow(
+        expect(() => validateAndGenerateConnectorManifest(connector)).toThrow(
             /Validation failed for action type create in the managed resource iam-user/,
         );
     });
 
-    it('should generate a manifest for a valid plugin', () => {
-        const plugin = new OpenIgaPlugin({
-            name: 'plugin',
+    it('should generate a manifest for a valid connector', () => {
+        const connector = new OpenIgaConnector({
+            name: 'connector',
             description: 'desc',
             config: [{ name: 'REGION', description: 'region', required: true }],
             allowedDomains: ['domain.com'],
@@ -97,9 +97,9 @@ describe('validateAndGeneratePluginManifest', () => {
             handler: () => ({}) as never,
         });
 
-        const manifest = validateAndGeneratePluginManifest(plugin);
+        const manifest = validateAndGenerateConnectorManifest(connector);
 
-        expect(manifest.name).toBe('plugin');
+        expect(manifest.name).toBe('connector');
         expect(manifest.description).toBe('desc');
         expect(manifest.allowedDomains).toEqual(['domain.com']);
         expect(manifest.actions).toHaveLength(1);

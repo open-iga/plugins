@@ -114,7 +114,7 @@ const compileToWasm = ({
         throw new Error('wasm: `extism-js` not found on PATH. Install it — https://github.com/extism/js-pdk');
     }
 
-    // Rename JS to <pluginName>.js, then compile.
+    // Rename JS to <connectorName>.js, then compile.
     renameSync(emittedBundlePath, newBundlePath);
     log.info('compiling', path.basename(newBundlePath), '→', path.basename(wasmFilePath));
     const proc = Bun.spawnSync([extism, newBundlePath, '-i', dtsFilePath, '-o', wasmFilePath]);
@@ -133,9 +133,9 @@ export const wasmPlugin = (ctx: BuildContext): BunPlugin => ({
     name: 'wasm',
     setup(build) {
         build.onEnd(async () => {
-            const pluginName = ctx.pluginName;
+            const pluginName = ctx.connectorName;
             if (!pluginName) {
-                throw new Error('wasm: pluginName not set — codegen plugin must run first');
+                throw new Error('wasm: connectorName not set — codegen plugin must run first');
             }
 
             const emittedBundlePath = path.join(OUT_DIR, `${VIRTUAL_ENTRY}.js`);

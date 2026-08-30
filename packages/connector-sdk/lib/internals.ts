@@ -1,1 +1,1 @@
-export { createRuntimeDispatcher } from './iga-plugin/dispatcher.ts';
+export { createRuntimeDispatcher } from './iga/dispatcher.ts';

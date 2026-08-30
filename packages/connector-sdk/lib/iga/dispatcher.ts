@@ -1,6 +1,6 @@
-import type { OpenIgaPlugin } from './plugin.ts';
+import type { OpenIgaConnector } from './connector/builder.ts';
 import * as z from 'zod/mini';
-import { handlerInputOutputSchema } from './validation-schema/plugin.account-action-handler.schema.ts';
+import { handlerInputOutputSchema } from './connector/validation-schema/connector.account-action-handler.schema.ts';
 import { installRuntimePolyfills } from '../polyfills/installer.ts';
 import { buildConfig } from '../utils/config.ts';
 
@@ -14,7 +14,7 @@ const prettyZodError = (error: z.core.$ZodError) => z.prettifyError(error);
  * Runtime dispatcher. Idea is to expose a single API which wrapper the function call
  * TODO: Return error code from the dispatcher for the Host to categorize
  */
-export const createRuntimeDispatcher = (plugin: OpenIgaPlugin<any>) => {
+export const createRuntimeDispatcher = (plugin: OpenIgaConnector<any>) => {
     // Guarantee the runtime globals connectors rely on (Request, WebCrypto HMAC).
     installRuntimePolyfills();
 

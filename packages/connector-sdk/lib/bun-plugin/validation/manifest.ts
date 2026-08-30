@@ -1,11 +1,11 @@
 import {
-    type PluginAccountAction,
-    pluginAccountActionSchema,
-} from '../../iga-plugin/validation-schema/plugin.account-action.schema.ts';
+    type ConnectorAccountAction,
+    connectorAccountActionSchema,
+} from '../../iga/connector/validation-schema/connector.account-action.schema.ts';
 import { z } from 'zod/mini';
-import type { PluginConfig } from '../../iga-plugin/validation-schema/plugin.config.schema.ts';
-import { OpenIgaPlugin } from '../../iga-plugin/plugin.ts';
-import { pluginSettingsSchema } from '../../iga-plugin/validation-schema/plugin.settings.ts';
+import type { ConnectorConfig } from '../../iga/connector/validation-schema/connector.config.schema.ts';
+import { OpenIgaConnector } from '../../iga/connector/builder.ts';
+import { connectorSettingsSchema } from '../../iga/connector/validation-schema/connector.settings.schema.ts';
 
 /**
  * Config Template Placeholders regex
@@ -15,10 +15,10 @@ const CONFIG_PLACEHOLDERS = /\{\{\s*([A-Za-z0-9_-]+)\s*\}\}/g;
 type Manifest = {
     name: string;
     description: string;
-    config: PluginConfig;
+    config: ConnectorConfig;
     allowedDomains: string[];
     actions: ({ id: string } & Pick<
-        z.infer<typeof pluginAccountActionSchema>,
+        z.infer<typeof connectorAccountActionSchema>,
         'description' | 'endpoints' | 'config'
     >)[];
 };
@@ -31,8 +31,8 @@ export const validateConfigPlaceHolder = ({
     endpoints,
     config,
 }: {
-    endpoints: PluginAccountAction['endpoints'];
-    config: PluginConfig;
+    endpoints: ConnectorAccountAction['endpoints'];
+    config: ConnectorConfig;
 }) => {
     const userDefinedConfigSet = new Map(config.map(({ name, required }) => [name, required]));
 
@@ -62,14 +62,14 @@ export const validateConfigPlaceHolder = ({
 
 /**
  * There are two levels of validation: build and runtime
- * Build-time validates the registry. Runtime is part of dispatcher that sits between the host and the plugin
+ * Build-time validates the registry. Runtime is part of dispatcher that sits between the host and the connector
  * */
-export const validateAndGeneratePluginManifest = (plugin: unknown): Manifest => {
-    if (!(plugin instanceof OpenIgaPlugin)) {
-        throw new Error(`Default export should be an instance of ${OpenIgaPlugin.name}`);
+export const validateAndGenerateConnectorManifest = (connector: unknown): Manifest => {
+    if (!(connector instanceof OpenIgaConnector)) {
+        throw new Error(`Default export should be an instance of ${OpenIgaConnector.name}`);
     }
 
-    const settingsResult = z.safeParse(pluginSettingsSchema, plugin.settings);
+    const settingsResult = z.safeParse(connectorSettingsSchema, connector.settings);
     if (!settingsResult.success) {
         throw new Error(`Validation Failed for Plugin setting. Reason: ${z.prettifyError(settingsResult.error)}`);
     }
@@ -77,10 +77,10 @@ export const validateAndGeneratePluginManifest = (plugin: unknown): Manifest => 
     const { name, config, description, allowedDomains } = settingsResult.data;
     const manifest: Manifest = { name, description, config, allowedDomains, actions: [] };
 
-    [...plugin.registry].forEach(([name, action]) => {
-        const [managedResource, actionName] = plugin.getAccountActionsDetails(name);
+    [...connector.registry].forEach(([name, action]) => {
+        const [managedResource, actionName] = connector.getAccountActionsDetails(name);
 
-        const result = pluginAccountActionSchema.safeParse(action);
+        const result = connectorAccountActionSchema.safeParse(action);
         if (!result.success) {
             throw new Error(
                 `Validation failed for action type ${actionName} in the managed resource ${managedResource}. Reason: ${z.prettifyError(result.error)}`,
