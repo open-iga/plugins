@@ -1,5 +1,5 @@
 {
-    "extends": ["../../tsconfig.json"],
+    "extends": ["../../tsconfig.json", "@open-iga/connector-sdk/tsconfig.connector.json"],
     "include": ["e2e", "test-setup.ts"],
     "compilerOptions": {
         "lib": ["esnext"],

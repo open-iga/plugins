@@ -1,14 +1,19 @@
-import type awsPlugin from '../aws-plugin.ts';
+import { sendEmail } from '@open-iga/connector-sdk';
+import type awsConnector from '../aws-connector.ts';
 import { assumeRole } from '../utils/sts.ts';
-import { createUser } from '../utils/iam.ts';
+import { createUser, createLoginProfile } from '../utils/iam.ts';
+import { generateTemporaryPassword } from '../utils/password.ts';
 
-export const registerAccountActionCreation = (plugin: typeof awsPlugin) => {
+// ARN shape: arn:aws:iam::<accountId>:user/<name>. The console sign-in URL is account-scoped.
+const accountIdFromArn = (arn: string): string => arn.split(':')[4] ?? '';
+
+export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
     plugin.registerAccountActions('iam-user', {
         type: 'create',
         description: 'IAM User account creation',
         endpoints: [
             { method: 'POST', url: 'https://sts.{{AWS_REGION}}.amazonaws.com/', description: 'STS endpoint URL' },
-            { method: 'POST', url: 'https://iam.amazonaws.com/', description: 'STS endpoint URL' },
+            { method: 'POST', url: 'https://iam.amazonaws.com/', description: 'IAM endpoint URL' },
         ],
         config: [
             {
@@ -37,7 +42,32 @@ export const registerAccountActionCreation = (plugin: typeof awsPlugin) => {
             const created = await createUser({
                 endpoint: iamEndpoint,
                 credentials: assumed,
-                userName: input.email,
+                userName: `${input.firstname}.${input.lastname}`,
+            });
+
+            // To grant the console access to user with a one-time password that must be changed after the first login
+            const temporaryPassword = generateTemporaryPassword();
+            await createLoginProfile({
+                endpoint: iamEndpoint,
+                credentials: assumed,
+                userName: created.userName,
+                password: temporaryPassword,
+            });
+
+            // Deliver credentials via the Host email capability so the password only travels
+            // through that side channel — never through this action's return value. The Host
+            // injects the recipient from the invocation input; the connector supplies content only.
+            const loginUrl = `https://${accountIdFromArn(created.arn)}.signin.aws.amazon.com/console`;
+            sendEmail({
+                subject: 'Your AWS access',
+                body: [
+                    `Hi ${input.firstname} ${input.lastname},`,
+                    '',
+                    'Here is your AWS access. You will be asked to set a new password at first sign-in.',
+                    `AWS Login URL: ${loginUrl}`,
+                    `Username: ${created.userName}`,
+                    `Password: ${temporaryPassword}`,
+                ].join('\n'),
             });
 
             return {
