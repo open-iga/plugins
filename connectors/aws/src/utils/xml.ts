@@ -8,16 +8,14 @@ const parser = new XMLParser({ ignoreAttributes: true, parseTagValue: false });
  * aren't coerced to numbers; attributes are ignored — AWS Query responses carry
  * data in element text.
  * */
-export function parseXml(xml: string): unknown {
-    return parser.parse(xml);
-}
+export const parseXml = (xml: string): unknown => parser.parse(xml);
 
 /**
  * First value found for `key` anywhere in the parsed tree (depth-first). AWS Query
  * fields are uniquely named (AccessKeyId, UserId, Message, …), so a name lookup is
  * unambiguous and avoids hard-coding response paths.
  * */
-export function findValue(node: unknown, key: string): string {
+export const findValue = (node: unknown, key: string): string => {
     if (node === null || typeof node !== 'object') {
         return '';
     }

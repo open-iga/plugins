@@ -6,7 +6,7 @@ import { wasmPlugin } from '../bun-plugin/wasm.plugin.ts';
 // Shared between plugins
 export type BuildContext = {
     // Set by the codegen plugin when it imports the author entry point
-    pluginName?: string;
+    connectorName?: string;
 };
 
 export const OUT_DIR = '.open-iga';

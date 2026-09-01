@@ -11,7 +11,14 @@ export interface AwsRequestOptions {
     endpoint: string;
     region: string;
     service: 'sts' | 'iam';
-    action: 'AssumeRole' | 'CreateUser';
+    action:
+        | 'AssumeRole'
+        | 'CreateUser'
+        | 'CreateLoginProfile'
+        | 'GetLoginProfile'
+        | 'GetUser'
+        | 'DeleteLoginProfile'
+        | 'DeleteUser';
     version: string; // service API version that pins the request/response contract
     credentials: AwsCredentials;
     // Action-specific params; undefined/empty values are omitted from the request.

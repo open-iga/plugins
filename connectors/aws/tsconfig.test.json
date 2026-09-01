@@ -1,6 +1,6 @@
 {
-    "extends": ["../../tsconfig.json"],
-    "include": ["e2e", "test-setup.ts"],
+    "extends": ["../../tsconfig.json", "@open-iga/connector-sdk/tsconfig.connector.json"],
+    "include": ["e2e", "test-setup.ts", "src/**/*.test.ts"],
     "compilerOptions": {
         "lib": ["esnext"],
         "types": ["bun", "bun-types/test-globals"]

@@ -1,7 +1,11 @@
-import { OpenIgaPlugin } from '@open-iga/connector-sdk';
+import { OpenIgaConnector } from '@open-iga/connector-sdk';
 import { registerAccountActionCreation } from './account-actions/create.ts';
+import { registerAccountActionDisable } from './account-actions/disable.ts';
+import { registerAccountActionEnable } from './account-actions/enable.ts';
+import { registerAccountActionDelete } from './account-actions/delete.ts';
+import { registerAccountActionRead } from './account-actions/read.ts';
 
-export const awsPlugin = new OpenIgaPlugin({
+export const awsConnector = new OpenIgaConnector({
     name: 'aws',
     description: 'AWS plugin for OpenIGA core',
     config: [
@@ -21,6 +25,10 @@ export const awsPlugin = new OpenIgaPlugin({
     allowedDomains: ['*.amazonaws.com'],
 });
 
-registerAccountActionCreation(awsPlugin);
+registerAccountActionCreation(awsConnector);
+registerAccountActionDisable(awsConnector);
+registerAccountActionEnable(awsConnector);
+registerAccountActionDelete(awsConnector);
+registerAccountActionRead(awsConnector);
 
-export default awsPlugin;
+export default awsConnector;

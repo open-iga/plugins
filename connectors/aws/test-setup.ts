@@ -5,18 +5,18 @@ import { GenericContainer, type StartedTestContainer } from 'testcontainers';
 // Disable it with the env since the containers are still cleaned up by the afterAll block
 process.env.TESTCONTAINERS_RYUK_DISABLED ??= 'true';
 
-let floci: StartedTestContainer;
+let ministack: StartedTestContainer;
 
 console.log('Preload script started');
 beforeAll(async () => {
     const startTIme = performance.now();
-    console.log('Setting up Floci using testcontainers');
-    floci = await new GenericContainer('floci/floci:1.7.0-compat').withExposedPorts(4566).start();
+    console.log('Setting up MiniStack using testcontainers');
+    ministack = await new GenericContainer('ministackorg/ministack:1.5').withExposedPorts(4566).start();
 
-    console.log(`Floci through testcontainers started in ${Math.ceil((performance.now() - startTIme) / 1_000)}s`);
-    process.env.FLOCI_ENDPOINT_URL = `http://localhost:${floci.getMappedPort(4566)}`;
+    console.log(`MiniStack through testcontainers started in ${Math.ceil((performance.now() - startTIme) / 1_000)}s`);
+    process.env.AWS_ENDPOINT_URL = `http://localhost:${ministack.getMappedPort(4566)}`;
 }, 300_000);
 
 afterAll(async () => {
-    await floci.stop();
+    await ministack.stop();
 }, 60_000);

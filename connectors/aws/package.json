@@ -3,7 +3,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "compile": "open-iga compile --entryPoint src/aws-plugin.ts",
+        "compile": "open-iga compile --entryPoint src/aws-connector.ts",
         "test": "bun run compile && bun test",
         "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.test.json"
     },

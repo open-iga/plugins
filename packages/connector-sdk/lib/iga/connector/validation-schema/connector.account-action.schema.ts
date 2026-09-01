@@ -1,9 +1,9 @@
 import * as z from 'zod/mini';
-import { pluginConfigSchema } from './plugin.config.schema.ts';
+import { connectorConfigSchema } from './connector.config.schema.ts';
 
 // Build-time validation schema for an account action
-export const pluginAccountActionSchema = z.object({
-    type: z.enum(['create']),
+export const connectorAccountActionSchema = z.object({
+    type: z.enum(['create', 'disable', 'enable', 'delete', 'read']),
     description: z.string(),
     endpoints: z.array(
         z.object({
@@ -17,11 +17,11 @@ export const pluginAccountActionSchema = z.object({
             description: z.string().check(z.minLength(1)),
         }),
     ),
-    config: z.optional(pluginConfigSchema),
+    config: z.optional(connectorConfigSchema),
     handler: z.custom<(...args: unknown[]) => unknown>(
         (input) => typeof input === 'function',
         'handler must be a function',
     ),
 });
 
-export type PluginAccountAction = z.infer<typeof pluginAccountActionSchema>;
+export type ConnectorAccountAction = z.infer<typeof connectorAccountActionSchema>;

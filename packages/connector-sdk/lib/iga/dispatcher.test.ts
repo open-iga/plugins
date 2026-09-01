@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
 import { createRuntimeDispatcher } from './dispatcher.ts';
-import { type AccountAction, OpenIgaPlugin } from './plugin.ts';
-import type { PluginConfig } from './validation-schema/plugin.config.schema.ts';
+import { type AccountAction, OpenIgaConnector } from './connector/builder.ts';
+import type { ConnectorConfig } from './connector/validation-schema/connector.config.schema.ts';
 
 /**
  * The dispatcher talks to the Extism host via the `Host` and `Config` globals.
@@ -23,9 +23,12 @@ const validInput = {
     lastname: 'user',
 };
 
-const buildPlugin = (handler: AccountAction['handler'] = () => ({ id: 'user-1' }), config: PluginConfig = []) =>
-    new OpenIgaPlugin({
-        name: 'plugin',
+const buildPlugin = (
+    handler: AccountAction<ConnectorConfig, [], 'create'>['handler'] = () => ({ id: 'user-1' }),
+    config: ConnectorConfig = [],
+) =>
+    new OpenIgaConnector({
+        name: 'connector',
         description: 'desc',
         config,
         allowedDomains: ['domain.com'],
@@ -86,7 +89,7 @@ describe('createRuntimeDispatcher', () => {
         expect(readHostOutput().error).toMatch(/Host input validation error/);
     });
 
-    it('should throw error if the required config from the plugin is missing', async () => {
+    it('should throw error if the required config from the connector is missing', async () => {
         const dispatch = createRuntimeDispatcher(
             buildPlugin(() => ({ id: 'user-1' }) as never, [{ name: 'REGION', description: 'region', required: true }]),
         );

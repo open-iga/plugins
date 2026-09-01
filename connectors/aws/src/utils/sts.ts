@@ -19,14 +19,14 @@ export interface AssumedRole {
     expiration: string;
 }
 
-export async function assumeRole({
+export const assumeRole = async ({
     endpoint,
     credentials,
     durationSeconds,
     region,
     roleArn,
     roleSessionName,
-}: AssumeRoleOptions): Promise<AssumedRole> {
+}: AssumeRoleOptions): Promise<AssumedRole> => {
     const res = await awsRequest({
         endpoint,
         region,

@@ -1,5 +1,10 @@
 // oxlint-disable-next-line typescript/triple-slash-reference
 /// <reference path="../../../node_modules/@extism/js-pdk/types/polyfills.d.ts" />
+// Pull in the full Extism PDK globals (Host, Memory, getFunctions) plus the SDK's host-function
+// augmentation (sendEmail) so connectors consuming this env can call Host capabilities. The SDK's
+// own build already loads this file, so the reference simply dedupes there.
+// oxlint-disable-next-line typescript/triple-slash-reference
+/// <reference path="../extism-jspdk.d.ts" />
 
 // --- fetch (native, host-backed; extism omits it) ----------------------------------
 interface FetchResponse {

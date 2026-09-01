@@ -1,4 +1,4 @@
-import type { PluginAccountAction } from '../iga-plugin/validation-schema/plugin.account-action.schema.ts';
+import type { ConnectorAccountAction } from '../iga/connector/validation-schema/connector.account-action.schema.ts';
 
 /**
  * Config Template Placeholders regex
@@ -10,10 +10,10 @@ const CONFIG_PLACEHOLDERS = /\{\{\s*([A-Za-z0-9_-]+)\s*\}\}/g;
  * The same is applicable for testing
  * */
 export const createFetchProxy = (mockUpstream: string, config: Record<string, unknown>) => {
-    let allowedEndpoints: PluginAccountAction['endpoints'] = [];
+    let allowedEndpoints: ConnectorAccountAction['endpoints'] = [];
 
     return {
-        setAllowedEndpoint: (newAllowedEndpoints: PluginAccountAction['endpoints']) => {
+        setAllowedEndpoint: (newAllowedEndpoints: ConnectorAccountAction['endpoints']) => {
             allowedEndpoints = newAllowedEndpoints.map(({ method, description, url }) => {
                 const replacedUrl = url.replace(CONFIG_PLACEHOLDERS, (substring, key: string) => {
                     if (!config[key]) {

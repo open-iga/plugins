@@ -1,4 +1,4 @@
-/** Read the Host-provided config for the plugin's declared config */
+/** Read the Host-provided config for the connector's declared config */
 export const buildConfig = (configSpec: { name: string; required: boolean }[]): Record<string, string | null> => {
     const config: Record<string, string | null> = {};
     for (const { name, required } of configSpec) {
