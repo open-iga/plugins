@@ -1,4 +1,3 @@
-import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
 import { createMockedHost, type MockedHost } from '@open-iga/connector-sdk/test';
 import { awsConnector } from '../src/aws-connector.ts';
 import { getLoginProfile } from '../src/utils/iam.ts';

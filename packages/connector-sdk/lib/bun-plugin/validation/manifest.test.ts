@@ -2,12 +2,12 @@ import { describe, it, expect } from 'bun:test';
 import { validateConfigPlaceHolder, validateAndGenerateConnectorManifest } from './manifest.ts';
 import { OpenIgaConnector } from '../../iga/connector/builder.ts';
 import type { ConnectorConfig } from '../../iga/connector/validation-schema/connector.config.schema.ts';
-import type { PluginAccountAction } from '../../iga/connector/validation-schema/connector.account-action.schema.ts';
+import type { ConnectorAccountAction } from '../../iga/connector/validation-schema/connector.account-action.schema.ts';
 
 const config = (entries: { name: string; required: boolean }[]): ConnectorConfig =>
     entries.map(({ name, required }) => ({ name, description: name, required }));
 
-const endpoints = (urls: string[]): PluginAccountAction['endpoints'] =>
+const endpoints = (urls: string[]): ConnectorAccountAction['endpoints'] =>
     urls.map((url) => ({ method: 'GET', url, description: 'endpoint' }));
 
 describe('validateConfigPlaceHolder', () => {

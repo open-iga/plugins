@@ -71,7 +71,7 @@ export const validateAndGenerateConnectorManifest = (connector: unknown): Manife
 
     const settingsResult = z.safeParse(connectorSettingsSchema, connector.settings);
     if (!settingsResult.success) {
-        throw new Error(`Validation Failed for Plugin setting. Reason: ${z.prettifyError(settingsResult.error)}`);
+        throw new Error(`Validation Failed for connector setting. Reason: ${z.prettifyError(settingsResult.error)}`);
     }
 
     const { name, config, description, allowedDomains } = settingsResult.data;

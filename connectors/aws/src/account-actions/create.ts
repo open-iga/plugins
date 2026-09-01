@@ -1,8 +1,10 @@
 import { sendEmail } from '@open-iga/connector-sdk';
 import type awsConnector from '../aws-connector.ts';
 import { assumeRole } from '../utils/sts.ts';
+import { resolveRegion } from '../utils/region.ts';
 import { createUser, createLoginProfile } from '../utils/iam.ts';
 import { generateTemporaryPassword } from '../utils/password.ts';
+import { userNameFromEmail } from '../utils/username.ts';
 
 // ARN shape: arn:aws:iam::<accountId>:user/<name>. The console sign-in URL is account-scoped.
 const accountIdFromArn = (arn: string): string => arn.split(':')[4] ?? '';
@@ -23,7 +25,7 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
             },
         ],
         handler: async ({ config, input }) => {
-            const region = config.AWS_REGION ?? 'us-east-1';
+            const region = resolveRegion(config.AWS_REGION);
 
             const stsEndpoint = `https://sts.${region}.amazonaws.com`;
             const iamEndpoint = 'https://iam.amazonaws.com';
@@ -42,7 +44,7 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
             const created = await createUser({
                 endpoint: iamEndpoint,
                 credentials: assumed,
-                userName: `${input.firstname}.${input.lastname}`,
+                userName: userNameFromEmail(input.email),
             });
 
             // To grant the console access to user with a one-time password that must be changed after the first login

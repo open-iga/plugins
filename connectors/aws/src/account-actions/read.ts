@@ -1,5 +1,6 @@
 import type awsConnector from '../aws-connector.ts';
 import { assumeRole } from '../utils/sts.ts';
+import { resolveRegion } from '../utils/region.ts';
 import { userExists, hasLoginProfile } from '../utils/iam.ts';
 import { userNameFromArn } from '../utils/arn.ts';
 
@@ -19,7 +20,7 @@ export const registerAccountActionRead = (plugin: typeof awsConnector) => {
             },
         ],
         handler: async ({ config, input }) => {
-            const region = config.AWS_REGION ?? 'us-east-1';
+            const region = resolveRegion(config.AWS_REGION);
 
             const stsEndpoint = `https://sts.${region}.amazonaws.com`;
             const iamEndpoint = 'https://iam.amazonaws.com';
