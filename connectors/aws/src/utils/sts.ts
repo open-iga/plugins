@@ -1,7 +1,21 @@
+import * as z from 'zod/mini';
 import { awsRequest, type AwsCredentials } from './client.ts';
 
 // https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html
 const STS_API_VERSION = '2011-06-15';
+
+const assumeRoleResponseSchema = z.object({
+    AssumeRoleResponse: z.object({
+        AssumeRoleResult: z.object({
+            Credentials: z.object({
+                AccessKeyId: z.string().check(z.minLength(1, 'AssumeRole response missing AccessKeyId')),
+                SecretAccessKey: z.string().check(z.minLength(1, 'AssumeRole response missing SecretAccessKey')),
+                SessionToken: z.string().check(z.minLength(1, 'AssumeRole response missing SessionToken')),
+                Expiration: z.optional(z.string()),
+            }),
+        }),
+    }),
+});
 
 export interface AssumeRoleOptions {
     endpoint: string;
@@ -27,7 +41,7 @@ export const assumeRole = async ({
     roleArn,
     roleSessionName,
 }: AssumeRoleOptions): Promise<AssumedRole> => {
-    const res = await awsRequest({
+    const { AssumeRoleResponse } = await awsRequest({
         endpoint,
         region,
         service: 'sts',
@@ -39,14 +53,15 @@ export const assumeRole = async ({
             RoleSessionName: roleSessionName,
             DurationSeconds: durationSeconds,
         },
+        schema: assumeRoleResponseSchema,
     });
 
-    const accessKeyId = res.get('AccessKeyId');
-    const secretAccessKey = res.get('SecretAccessKey');
-    const sessionToken = res.get('SessionToken');
-    if (!accessKeyId || !secretAccessKey || !sessionToken) {
-        throw new Error('AssumeRole response missing credentials');
-    }
+    const { AccessKeyId, SecretAccessKey, SessionToken, Expiration } = AssumeRoleResponse.AssumeRoleResult.Credentials;
 
-    return { accessKeyId, secretAccessKey, sessionToken, expiration: res.get('Expiration') };
-}
+    return {
+        accessKeyId: AccessKeyId,
+        secretAccessKey: SecretAccessKey,
+        sessionToken: SessionToken,
+        expiration: Expiration ?? '',
+    };
+};

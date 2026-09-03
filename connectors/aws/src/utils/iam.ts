@@ -1,7 +1,33 @@
+import * as z from 'zod/mini';
 import { awsRequest, type AwsCredentials } from './client.ts';
 
 // https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateUser.html
 const IAM_API_VERSION = '2010-05-08';
+
+// Parsed CreateUser XML: arn is required (it is the account's stable id)
+const createUserResponseSchema = z.object({
+    CreateUserResponse: z.object({
+        CreateUserResult: z.object({
+            User: z.object({
+                Arn: z.string().check(z.minLength(1, 'CreateUser response missing user ARN')),
+                UserId: z.string(),
+                UserName: z.string(),
+            }),
+        }),
+    }),
+});
+
+// Parsed GetLoginProfile XML. PasswordResetRequired comes back as the string "true"/"false".
+const getLoginProfileResponseSchema = z.object({
+    GetLoginProfileResponse: z.object({
+        GetLoginProfileResult: z.object({
+            LoginProfile: z.object({
+                UserName: z.string(),
+                PasswordResetRequired: z.optional(z.string()),
+            }),
+        }),
+    }),
+});
 
 // IAM is a global service reached at iam.amazonaws.com; SigV4 for it is always
 // signed with us-east-1. Signing with the caller's region yields SignatureDoesNotMatch.
@@ -21,7 +47,7 @@ export interface CreatedUser {
 }
 
 export const createUser = async ({ endpoint, credentials, userName }: CreateUserOptions): Promise<CreatedUser> => {
-    const res = await awsRequest({
+    const { CreateUserResponse } = await awsRequest({
         endpoint: endpoint,
         region: IAM_SIGNING_REGION,
         service: 'iam',
@@ -29,14 +55,11 @@ export const createUser = async ({ endpoint, credentials, userName }: CreateUser
         version: IAM_API_VERSION,
         credentials: credentials,
         params: { UserName: userName },
+        schema: createUserResponseSchema,
     });
 
-    const arn = res.get('Arn');
-    if (!arn) {
-        throw new Error('CreateUser response missing user ARN');
-    }
-
-    return { userId: res.get('UserId'), userName: res.get('UserName'), arn };
+    const { Arn, UserId, UserName } = CreateUserResponse.CreateUserResult.User;
+    return { userId: UserId, userName: UserName, arn: Arn };
 };
 
 export interface CreateLoginProfileOptions {
@@ -86,7 +109,7 @@ export const getLoginProfile = async ({
     credentials,
     userName,
 }: GetLoginProfileOptions): Promise<LoginProfile> => {
-    const res = await awsRequest({
+    const { GetLoginProfileResponse } = await awsRequest({
         endpoint,
         region: IAM_SIGNING_REGION,
         service: 'iam',
@@ -94,11 +117,13 @@ export const getLoginProfile = async ({
         version: IAM_API_VERSION,
         credentials,
         params: { UserName: userName },
+        schema: getLoginProfileResponseSchema,
     });
 
+    const { UserName, PasswordResetRequired } = GetLoginProfileResponse.GetLoginProfileResult.LoginProfile;
     return {
-        userName: res.get('UserName'),
-        passwordResetRequired: res.get('PasswordResetRequired') === 'true',
+        userName: UserName,
+        passwordResetRequired: PasswordResetRequired === 'true',
     };
 };
 
@@ -154,8 +179,6 @@ export const deleteLoginProfile = async ({ endpoint, credentials, userName }: Ia
 };
 
 // https://docs.aws.amazon.com/IAM/latest/APIReference/API_DeleteUser.html
-// The user must have no attached login profile, access keys or other dependencies first,
-// otherwise AWS returns DeleteConflict.
 export const deleteUser = async ({ endpoint, credentials, userName }: IamUserOptions): Promise<void> => {
     await awsRequest({
         endpoint,

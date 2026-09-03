@@ -39,8 +39,8 @@ describe('account-actions.lifecycle', () => {
 
     it('should create, disable, enable and delete an IAM user', async () => {
         const email = `lifecycle.user@openiga.dev`;
-        // The IAM username is derived from first + last name (see the create action).
-        const userName = 'life.cycle';
+        // The IAM username is derived from the email's local part (see the create action).
+        const userName = 'lifecycle.user';
 
         // Create — user exists with a login profile.
         const created = await host.callAccountActions('iam-user', 'create', {

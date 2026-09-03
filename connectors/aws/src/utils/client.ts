@@ -1,5 +1,5 @@
 import { AwsClient } from 'aws4fetch';
-import { parseXml, findValue } from './xml.ts';
+import { XMLParser } from 'fast-xml-parser';
 
 export interface AwsCredentials {
     accessKeyId: string;
@@ -7,7 +7,7 @@ export interface AwsCredentials {
     sessionToken?: string;
 }
 
-export interface AwsRequestOptions {
+export interface AwsRequestOptions<T = unknown> {
     endpoint: string;
     region: string;
     service: 'sts' | 'iam';
@@ -23,12 +23,24 @@ export interface AwsRequestOptions {
     credentials: AwsCredentials;
     // Action-specific params; undefined/empty values are omitted from the request.
     params?: Record<string, string | number | undefined>;
+    // Optional schema the caller supplies to validate and shape the parsed response.
+    schema?: ResponseSchema<T>;
 }
 
-export interface AwsResponse {
-    doc: unknown;
-    // Text of the first element named `tag` anywhere in the response ('' if absent).
-    get(tag: string): string;
+const parser = new XMLParser({ ignoreAttributes: true, parseTagValue: false });
+
+/**
+ * Parse an AWS Query-protocol XML response into a plain JS object (QuickJS has no DOMParser).
+ * Values are kept as strings (parseTagValue: false) so ids/tokens/dates aren't coerced to numbers;
+ * attributes are ignored — AWS Query responses carry their data in element text. Callers hand the
+ * result to a zod schema that both validates and shapes the fields they need.
+ */
+export const parseXml = (xml: string): unknown => parser.parse(xml);
+
+// The caller passes any schema exposing a `parse` (e.g. a zod schema); the client stays
+// decoupled from the validator and simply returns its validated output.
+export interface ResponseSchema<T> {
+    parse(input: unknown): T;
 }
 
 /**
@@ -38,7 +50,7 @@ export interface AwsResponse {
  * SigV4: https://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html
  * Smithy: https://smithy.io/2.0/aws/protocols/aws-query-protocol.html
  */
-export const awsRequest = async ({
+export const awsRequest = async <T = unknown>({
     endpoint,
     action,
     credentials,
@@ -46,7 +58,8 @@ export const awsRequest = async ({
     region,
     service,
     version,
-}: AwsRequestOptions): Promise<AwsResponse> => {
+    schema,
+}: AwsRequestOptions<T>): Promise<T> => {
     const urlSearchParams = new URLSearchParams({ Action: action, Version: version });
     for (const [key, value] of Object.entries(params ?? {})) {
         if (value !== undefined && value !== '') urlSearchParams.set(key, String(value));
@@ -78,9 +91,12 @@ export const awsRequest = async ({
 
     if (!res.ok) {
         // AWS Query errors: <ErrorResponse><Error><Code>…</Code><Message>…</Message>.
-        const detail = [findValue(doc, 'Code'), findValue(doc, 'Message')].filter(Boolean).join(' ');
+        const error = (doc as { ErrorResponse?: { Error?: { Code?: string; Message?: string } } })?.ErrorResponse
+            ?.Error;
+        const detail = [error?.Code, error?.Message].filter(Boolean).join(' ');
         throw new Error(`${action} failed (${res.status}): ${detail || text}`);
     }
 
-    return { doc, get: (tag) => findValue(doc, tag) };
+    // With no schema the response body is discarded; the schema both validates and shapes it.
+    return schema ? schema.parse(doc) : (doc as T);
 };

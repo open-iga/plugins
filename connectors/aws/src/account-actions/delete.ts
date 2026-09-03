@@ -19,6 +19,7 @@ export const registerAccountActionDelete = (plugin: typeof awsConnector) => {
                 required: true,
             },
         ],
+        // TODO: cleanup after introducing entitlements. The user must have no attached login profile, access keys or other dependencies first, otherwise AWS returns DeleteConflict.
         handler: async ({ config, input }) => {
             const region = resolveRegion(config.AWS_REGION);
 
