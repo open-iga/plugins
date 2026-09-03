@@ -22,6 +22,13 @@ export const generateTemporaryPassword = (pattern?: string | null): string => {
     crypto.getRandomValues(bytes);
     return Array.from(template, (token, i) => {
         const charClass = charClasses[token];
-        return charClass ? charClass.charAt(bytes[i]! % charClass.length) : token;
+
+        if (!charClass) {
+            throw new Error(
+                `Password pattern only supports the tokens ${Object.keys(charClasses).join(', ')}; got ${token}.`,
+            );
+        }
+
+        return charClass.charAt(bytes[i]! % charClass.length);
     }).join('');
 };

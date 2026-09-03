@@ -62,6 +62,7 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
                 password: temporaryPassword,
             });
 
+            // TODO: there is a possibility the plugin could do a phishing attack; check for alternative options
             // Deliver credentials via the Host email capability so the password only travels
             // through that side channel — never through this action's return value. The Host
             // injects the recipient from the invocation input; the connector supplies content only.

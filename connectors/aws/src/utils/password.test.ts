@@ -21,8 +21,12 @@ describe('generateTemporaryPassword', () => {
         expect(generateTemporaryPassword('@@@@@@@@')).toMatch(/^[!@#$%^&*()_+\-=[\]{}|]{8}$/);
     });
 
-    it('should copy non-token characters through literally', () => {
-        expect(generateTemporaryPassword('pw-#####')).toMatch(/^pw-[0-9]{5}$/);
+    it('should reject a literal-only pattern that would repeat the same password every call', () => {
+        expect(() => generateTemporaryPassword('PW-2024!!')).toThrow('only supports the tokens');
+    });
+
+    it('should reject characters AWS IAM does not accept', () => {
+        expect(() => generateTemporaryPassword('Aa#@Aa#😀')).toThrow('only supports the tokens');
     });
 
     it('should reject a pattern shorter than the minimum length', () => {
