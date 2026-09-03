@@ -19,11 +19,13 @@
       "dependencies": {
         "aws4fetch": "catalog:",
         "fast-xml-parser": "catalog:",
+        "zod": "catalog:",
       },
       "devDependencies": {
         "@open-iga/connector-sdk": "workspace:*",
         "@types/bun": "catalog:",
         "bun-types": "catalog:",
+        "testcontainers": "catalog:",
         "typescript": "catalog:",
       },
     },

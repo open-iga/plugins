@@ -19,9 +19,15 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
         ],
         config: [
             {
-                name: 'AWS_USER_CREATION_ROLE',
-                description: 'ARN of the least-privilege role assumed (via STS) to create IAM users',
+                name: 'AWS_USER_MANAGEMENT_ROLE',
+                description: 'ARN of the least-privilege role assumed (via STS) to manage IAM users',
                 required: true,
+            },
+            {
+                name: 'AWS_PASSWORD_PATTERN',
+                description:
+                    'Template for the temporary password: A=uppercase, a=lowercase, #=digit, @=symbol, other chars are literal (e.g.) AAa#@ would result two uppercase, one lowercase, a digit and a symbol. Defaults to a 30-character mix of all classes.',
+                required: false,
             },
         ],
         handler: async ({ config, input }) => {
@@ -37,7 +43,7 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
                     accessKeyId: config.AWS_ACCESS_KEY_ID,
                     secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
                 },
-                roleArn: config.AWS_USER_CREATION_ROLE,
+                roleArn: config.AWS_USER_MANAGEMENT_ROLE,
                 roleSessionName: 'openiga-aws-iam-user-create',
             });
 
@@ -48,7 +54,7 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
             });
 
             // To grant the console access to user with a one-time password that must be changed after the first login
-            const temporaryPassword = generateTemporaryPassword();
+            const temporaryPassword = generateTemporaryPassword(config.AWS_PASSWORD_PATTERN);
             await createLoginProfile({
                 endpoint: iamEndpoint,
                 credentials: assumed,
