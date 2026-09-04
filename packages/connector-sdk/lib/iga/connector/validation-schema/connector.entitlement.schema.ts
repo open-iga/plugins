@@ -3,7 +3,7 @@ import { connectorConfigSchema } from './connector.config.schema.ts';
 
 // Build-time validation schema for an entitlement operation (parallel to an account action).
 export const connectorEntitlementSchema = z.object({
-    type: z.enum(['discover', 'grant', 'revoke']),
+    type: z.enum(['discover', 'grant', 'revoke', 'read']),
     description: z.string(),
     endpoints: z.array(
         z.object({
