@@ -7,18 +7,25 @@ export interface AwsCredentials {
     sessionToken?: string;
 }
 
+type SupportedAction =
+    | 'AssumeRole'
+    | 'CreateUser'
+    | 'CreateLoginProfile'
+    | 'GetLoginProfile'
+    | 'GetUser'
+    | 'DeleteLoginProfile'
+    | 'DeleteUser'
+    | 'ListGroups'
+    | 'ListGroupsForUser'
+    | 'AddUserToGroup'
+    | 'RemoveUserFromGroup'
+    | 'CreateGroup';
+
 export interface AwsRequestOptions<T = unknown> {
     endpoint: string;
     region: string;
     service: 'sts' | 'iam';
-    action:
-        | 'AssumeRole'
-        | 'CreateUser'
-        | 'CreateLoginProfile'
-        | 'GetLoginProfile'
-        | 'GetUser'
-        | 'DeleteLoginProfile'
-        | 'DeleteUser';
+    action: SupportedAction;
     version: string; // service API version that pins the request/response contract
     credentials: AwsCredentials;
     // Action-specific params; undefined/empty values are omitted from the request.
@@ -37,8 +44,7 @@ const parser = new XMLParser({ ignoreAttributes: true, parseTagValue: false });
  */
 export const parseXml = (xml: string): unknown => parser.parse(xml);
 
-// The caller passes any schema exposing a `parse` (e.g. a zod schema); the client stays
-// decoupled from the validator and simply returns its validated output.
+// Zod schema - TODO: parse throws an error check if safeParse can be used instead
 export interface ResponseSchema<T> {
     parse(input: unknown): T;
 }
@@ -81,7 +87,7 @@ export const awsRequest = async <T = unknown>({
         headers: { 'content-type': 'application/x-www-form-urlencoded; charset=utf-8' },
     });
 
-    // Extism `fetch` takes (url, init), not a Request instance — re-issue it.
+    // Extism `fetch` takes (url, init), not a Request instance
     const headers: Record<string, string> = {};
     signed.headers.forEach((value, key) => (headers[key] = value));
 
@@ -97,6 +103,5 @@ export const awsRequest = async <T = unknown>({
         throw new Error(`${action} failed (${res.status}): ${detail || text}`);
     }
 
-    // With no schema the response body is discarded; the schema both validates and shapes it.
     return schema ? schema.parse(doc) : (doc as T);
 };
