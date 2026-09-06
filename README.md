@@ -37,6 +37,6 @@ is compiled to WASM by the same toolchain. It declares:
 
 - **Account actions** — lifecycle operations on a managed resource (`create`, `read`, `update`,
   `enable`, `disable`, `delete`).
-- **Entitlements** — `discover`, `grant`, and `revoke` for assignable permissions (e.g. IAM roles).
+- **Entitlements** — `discover`, `grant`, `revoke` and `read` for assignable permissions (e.g. IAM groups).
 
 See `connectors/aws` for a complete reference implementation.

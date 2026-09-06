@@ -45,10 +45,9 @@ Account `id` = the user ARN.
 | `read`     | List the user's groups (`ListGroupsForUser`) — drift detection      | `AWS_ENTITLEMENT_MANAGEMENT_ROLE`                              |
 
 > [!Warning]
-> `AWS_GROUP_EXCLUDE_PATTERNS`: `;`-separated regex; a group is excluded if any pattern matches its name or path (e.g. `^ci-;/infra/`).
-> There will runtime errors if the patters is not regex
-
-Note: AWS hard-caps a user at **10 groups** — grants past that fail with `LimitExceeded`.
+>
+> - `AWS_GROUP_EXCLUDE_PATTERNS`: `;`-separated regex; a group is excluded if any pattern matches its name or path (e.g. `^ci-;/infra/`). There will runtime errors if the patters is not regex
+> - AWS hard-caps a user at [**10 groups**](https://docs.aws.amazon.com/general/latest/gr/iam-service.html) — grants past that fail with `LimitExceeded`.
 
 ## Develop
 
