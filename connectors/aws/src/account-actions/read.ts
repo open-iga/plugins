@@ -1,17 +1,16 @@
 import type awsConnector from '../aws-connector.ts';
 import { assumeRole } from '../utils/sts.ts';
+import { IAM_ENDPOINT, stsEndpoint, IAM_ACTION_ENDPOINTS } from '../utils/aws-endpoints.ts';
 import { resolveRegion } from '../utils/region.ts';
-import { userExists, hasLoginProfile } from '../utils/iam.ts';
+import { userExists } from '../utils/iam.user-exists.ts';
+import { hasLoginProfile } from '../utils/iam.login-profile.ts';
 import { userNameFromArn } from '../utils/arn.ts';
 
 export const registerAccountActionRead = (plugin: typeof awsConnector) => {
     plugin.registerAccountActions('iam-user', {
         type: 'read',
         description: 'Read an IAM user account state for drift detection',
-        endpoints: [
-            { method: 'POST', url: 'https://sts.{{AWS_REGION}}.amazonaws.com/', description: 'STS endpoint URL' },
-            { method: 'POST', url: 'https://iam.amazonaws.com/', description: 'IAM endpoint URL' },
-        ],
+        endpoints: IAM_ACTION_ENDPOINTS,
         config: [
             {
                 name: 'AWS_USER_MANAGEMENT_ROLE',
@@ -22,11 +21,8 @@ export const registerAccountActionRead = (plugin: typeof awsConnector) => {
         handler: async ({ config, input }) => {
             const region = resolveRegion(config.AWS_REGION);
 
-            const stsEndpoint = `https://sts.${region}.amazonaws.com`;
-            const iamEndpoint = 'https://iam.amazonaws.com';
-
             const assumed = await assumeRole({
-                endpoint: stsEndpoint,
+                endpoint: stsEndpoint(region),
                 region,
                 credentials: {
                     accessKeyId: config.AWS_ACCESS_KEY_ID,
@@ -38,13 +34,13 @@ export const registerAccountActionRead = (plugin: typeof awsConnector) => {
 
             const userName = userNameFromArn(input.id);
 
-            const exists = await userExists({ endpoint: iamEndpoint, credentials: assumed, userName });
+            const exists = await userExists({ endpoint: IAM_ENDPOINT, credentials: assumed, userName });
             if (!exists) {
                 return { exists: false, enabled: false };
             }
 
             // Enabled = the user still has console access (a login profile).
-            const enabled = await hasLoginProfile({ endpoint: iamEndpoint, credentials: assumed, userName });
+            const enabled = await hasLoginProfile({ endpoint: IAM_ENDPOINT, credentials: assumed, userName });
 
             return { exists: true, enabled };
         },

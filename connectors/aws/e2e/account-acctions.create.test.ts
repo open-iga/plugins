@@ -1,6 +1,6 @@
 import { createMockedHost, type MockedHost } from '@open-iga/connector-sdk/test';
 import { awsConnector } from '../src/aws-connector.ts';
-import { getLoginProfile } from '../src/utils/iam.ts';
+import { getLoginProfile } from '../src/utils/iam.login-profile.ts';
 
 describe('account-actions.create', () => {
     let host: MockedHost;
@@ -12,7 +12,7 @@ describe('account-actions.create', () => {
                 AWS_REGION: 'us-east-1',
                 AWS_ACCESS_KEY_ID: 'test',
                 AWS_SECRET_ACCESS_KEY: 'test',
-                AWS_USER_CREATION_ROLE: 'arn:aws:iam::000000000000:role/openiga-user-creation',
+                AWS_USER_MANAGEMENT_ROLE: 'arn:aws:iam::000000000000:role/openiga-user-creation',
             },
             mockUpstream: process.env.AWS_ENDPOINT_URL ?? '',
         });
@@ -96,7 +96,7 @@ describe('account-actions.create', () => {
                 AWS_REGION: 'us-east-1',
                 AWS_ACCESS_KEY_ID: 'test',
                 AWS_SECRET_ACCESS_KEY: 'test',
-                // AWS_USER_CREATION_ROLE intentionally omitted
+                // AWS_USER_MANAGEMENT_ROLE intentionally omitted
             },
             mockUpstream: process.env.AWS_ENDPOINT_URL ?? '',
         });
@@ -109,7 +109,7 @@ describe('account-actions.create', () => {
 
         expect(result.ok).toBe(false);
         if (!result.ok) {
-            expect(result.error).toContain('AWS_USER_CREATION_ROLE');
+            expect(result.error).toContain('AWS_USER_MANAGEMENT_ROLE');
         }
 
         await hostWithoutRole.close();

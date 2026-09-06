@@ -1,8 +1,10 @@
 import { sendEmail } from '@open-iga/connector-sdk';
 import type awsConnector from '../aws-connector.ts';
 import { assumeRole } from '../utils/sts.ts';
+import { IAM_ENDPOINT, stsEndpoint, IAM_ACTION_ENDPOINTS } from '../utils/aws-endpoints.ts';
 import { resolveRegion } from '../utils/region.ts';
-import { createUser, createLoginProfile } from '../utils/iam.ts';
+import { createUser } from '../utils/iam.create-user.ts';
+import { createLoginProfile } from '../utils/iam.login-profile.ts';
 import { generateTemporaryPassword } from '../utils/password.ts';
 import { userNameFromEmail } from '../utils/username.ts';
 
@@ -13,10 +15,7 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
     plugin.registerAccountActions('iam-user', {
         type: 'create',
         description: 'IAM User account creation',
-        endpoints: [
-            { method: 'POST', url: 'https://sts.{{AWS_REGION}}.amazonaws.com/', description: 'STS endpoint URL' },
-            { method: 'POST', url: 'https://iam.amazonaws.com/', description: 'IAM endpoint URL' },
-        ],
+        endpoints: IAM_ACTION_ENDPOINTS,
         config: [
             {
                 name: 'AWS_USER_MANAGEMENT_ROLE',
@@ -33,11 +32,8 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
         handler: async ({ config, input }) => {
             const region = resolveRegion(config.AWS_REGION);
 
-            const stsEndpoint = `https://sts.${region}.amazonaws.com`;
-            const iamEndpoint = 'https://iam.amazonaws.com';
-
             const assumed = await assumeRole({
-                endpoint: stsEndpoint,
+                endpoint: stsEndpoint(region),
                 region,
                 credentials: {
                     accessKeyId: config.AWS_ACCESS_KEY_ID,
@@ -48,7 +44,7 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
             });
 
             const created = await createUser({
-                endpoint: iamEndpoint,
+                endpoint: IAM_ENDPOINT,
                 credentials: assumed,
                 userName: userNameFromEmail(input.email),
             });
@@ -56,7 +52,7 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
             // To grant the console access to user with a one-time password that must be changed after the first login
             const temporaryPassword = generateTemporaryPassword(config.AWS_PASSWORD_PATTERN);
             await createLoginProfile({
-                endpoint: iamEndpoint,
+                endpoint: IAM_ENDPOINT,
                 credentials: assumed,
                 userName: created.userName,
                 password: temporaryPassword,

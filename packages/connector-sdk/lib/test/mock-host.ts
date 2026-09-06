@@ -5,14 +5,20 @@ import * as path from 'node:path';
 import { OUT_DIR } from '../cli/compile.ts';
 import type { ConnectorConfig } from '../iga/connector/validation-schema/connector.config.schema.ts';
 import type { ConnectorAccountAction } from '../iga/connector/validation-schema/connector.account-action.schema.ts';
+import type { ConnectorEntitlement } from '../iga/connector/validation-schema/connector.entitlement.schema.ts';
 import { z } from 'zod/mini';
 import type { handlerInputOutputSchema } from '../iga/connector/validation-schema/connector.account-action-handler.schema.ts';
+import type { entitlementHandlerInputOutputSchema } from '../iga/connector/validation-schema/connector.entitlement-handler.schema.ts';
 import type { LogLevel } from '@extism/extism';
 import { createFetchProxy } from './mock-fetch.ts';
 import type { EmailPayload } from '../iga/capabilities/email.schema.ts';
 
 export type MockedHostResult<Type extends ConnectorAccountAction['type']> =
     | { ok: true; output: z.infer<(typeof handlerInputOutputSchema)[Type]['output']> }
+    | { ok: false; error: string };
+
+export type MockedEntitlementResult<Type extends ConnectorEntitlement['type']> =
+    | { ok: true; output: z.infer<(typeof entitlementHandlerInputOutputSchema)[Type]['output']> }
     | { ok: false; error: string };
 
 export type MockedHost = {
@@ -22,6 +28,13 @@ export type MockedHost = {
         // Validation is performed by the dispatcher
         input: z.infer<(typeof handlerInputOutputSchema)[Type]['input']>,
     ) => Promise<MockedHostResult<Type>>;
+    // `input` is optional so operations with no input fields (e.g. discover) can be called
+    // without passing an empty object; grant/revoke inputs are still validated by the dispatcher.
+    callEntitlements: <Type extends ConnectorEntitlement['type']>(
+        managedResource: string,
+        type: Type,
+        input?: z.infer<(typeof entitlementHandlerInputOutputSchema)[Type]['input']>,
+    ) => Promise<MockedEntitlementResult<Type>>;
     hostFunctions: {
         sentEmails: EmailPayload[];
     };
@@ -80,6 +93,26 @@ export const createMockedHost = async <const Config extends ConnectorConfig>({
                 JSON.stringify({
                     __pluginId: pluginId,
                     ...input,
+                }),
+            );
+            if (!out) {
+                return { ok: false, error: 'no output' };
+            }
+
+            const parsed = out.json();
+            return 'error' in parsed ? { ok: false, error: String(parsed.error) } : { ok: true, output: parsed };
+        },
+
+        callEntitlements: async (managedResource, type, input) => {
+            const pluginId = plugin.createEntitlementId(managedResource, type);
+
+            proxy.setAllowedEndpoint(plugin.entitlementRegistry.get(pluginId)?.endpoints ?? []);
+
+            const out = await wasmPlugin.call(
+                'dispatch',
+                JSON.stringify({
+                    __pluginId: pluginId,
+                    ...(input ?? {}),
                 }),
             );
             if (!out) {
