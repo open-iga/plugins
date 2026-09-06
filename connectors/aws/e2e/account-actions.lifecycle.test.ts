@@ -1,11 +1,10 @@
 import { createMockedHost, type MockedHost } from '@open-iga/connector-sdk/test';
 import { awsConnector } from '../src/aws-connector.ts';
-import { getLoginProfile } from '../src/utils/iam.ts';
+import { getLoginProfile } from '../src/utils/iam.login-profile.ts';
 
 const endpoint = () => process.env.AWS_ENDPOINT_URL ?? '';
 const credentials = { accessKeyId: 'test', secretAccessKey: 'test' };
 
-// Does the user still have a console login profile in the emulator?
 const hasLoginProfile = async (userName: string): Promise<boolean> => {
     try {
         await getLoginProfile({ endpoint: endpoint(), credentials, userName });
