@@ -1,17 +1,15 @@
 import type awsConnector from '../aws-connector.ts';
 import { assumeRole } from '../utils/sts.ts';
+import { IAM_ENDPOINT, stsEndpoint, IAM_ACTION_ENDPOINTS } from '../utils/aws-endpoints.ts';
 import { resolveRegion } from '../utils/region.ts';
-import { deleteLoginProfile } from '../utils/iam.ts';
+import { deleteLoginProfile } from '../utils/iam.login-profile.ts';
 import { userNameFromArn } from '../utils/arn.ts';
 
 export const registerAccountActionDisable = (plugin: typeof awsConnector) => {
     plugin.registerAccountActions('iam-user', {
         type: 'disable',
         description: 'Disable an IAM user by revoking console access',
-        endpoints: [
-            { method: 'POST', url: 'https://sts.{{AWS_REGION}}.amazonaws.com/', description: 'STS endpoint URL' },
-            { method: 'POST', url: 'https://iam.amazonaws.com/', description: 'IAM endpoint URL' },
-        ],
+        endpoints: IAM_ACTION_ENDPOINTS,
         config: [
             {
                 name: 'AWS_USER_MANAGEMENT_ROLE',
@@ -22,11 +20,8 @@ export const registerAccountActionDisable = (plugin: typeof awsConnector) => {
         handler: async ({ config, input }) => {
             const region = resolveRegion(config.AWS_REGION);
 
-            const stsEndpoint = `https://sts.${region}.amazonaws.com`;
-            const iamEndpoint = 'https://iam.amazonaws.com';
-
             const assumed = await assumeRole({
-                endpoint: stsEndpoint,
+                endpoint: stsEndpoint(region),
                 region,
                 credentials: {
                     accessKeyId: config.AWS_ACCESS_KEY_ID,
@@ -39,7 +34,7 @@ export const registerAccountActionDisable = (plugin: typeof awsConnector) => {
             const userName = userNameFromArn(input.id);
 
             try {
-                await deleteLoginProfile({ endpoint: iamEndpoint, credentials: assumed, userName });
+                await deleteLoginProfile({ endpoint: IAM_ENDPOINT, credentials: assumed, userName });
             } catch (error) {
                 // No console access to begin with — already disabled, keep the action idempotent.
                 if (!String(error).includes('NoSuchEntity')) throw error;
