@@ -80,7 +80,16 @@ export const validateAndGenerateConnectorManifest = (connector: unknown): Manife
     }
 
     const { name, config, description, allowedDomains } = settingsResult.data;
-    const manifest: Manifest = { name, description, config, allowedDomains, actions: {}, entitlements: {} };
+    // Null-prototype records: managedResource is an arbitrary key, so `actions["__proto__"]` etc.
+    // must not resolve to an inherited value (would drop the op and mutate Object.prototype).
+    const manifest: Manifest = {
+        name,
+        description,
+        config,
+        allowedDomains,
+        actions: Object.create(null),
+        entitlements: Object.create(null),
+    };
 
     for (const [managedResource, accountActionConfig] of connector.accountActionsRegistry) {
         for (const [actionType, action] of accountActionConfig) {
