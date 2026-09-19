@@ -6,8 +6,15 @@ import { installRuntimePolyfills } from '../polyfills/installer.ts';
 import { buildConfig } from '../utils/config.ts';
 import type { ConnectorConfig } from './connector/validation-schema/connector.config.schema.ts';
 
-const pluginDispatcherSchema = z.object({
-    __pluginId: z.string(),
+// Dispatch envelope from the Host: routing + per-invocation config + the handler input, each in
+// its own slot. `kind` disambiguates `read` (both an account-action and an entitlement). `config`
+// carries only the keys the Host scoped to this operation — the isolation boundary lives Host-side.
+const envelopeSchema = z.object({
+    __kind: z.enum(['account-action', 'entitlement']),
+    __managedResource: z.string(),
+    __type: z.string(),
+    config: z.record(z.string(), z.string()),
+    input: z.unknown(),
 });
 
 const prettyZodError = (error: z.core.$ZodError) => z.prettifyError(error);
@@ -19,15 +26,25 @@ type ResolvedOperation = {
     output: z.ZodMiniType;
 };
 
-const resolveOperation = (plugin: OpenIgaConnector<any>, pluginId: string): ResolvedOperation | undefined => {
-    const entitlement = plugin.entitlementRegistry.get(pluginId);
-    if (entitlement) {
+const resolveOperation = (
+    plugin: OpenIgaConnector<any>,
+    { __kind, __managedResource, __type }: z.infer<typeof envelopeSchema>,
+): ResolvedOperation | undefined => {
+    if (__kind === 'entitlement') {
+        const entitlement = plugin.entitlementRegistry.get(__managedResource)?.get(__type);
+        if (!entitlement) {
+            return undefined;
+        }
+
         const { input, output } = entitlementHandlerInputOutputSchema[entitlement.type];
         return { handler: entitlement.handler, config: entitlement.config, input, output };
     }
 
-    const action = plugin.registry.get(pluginId);
-    if (!action) return undefined;
+    const action = plugin.accountActionsRegistry.get(__managedResource)?.get(__type);
+    if (!action) {
+        return undefined;
+    }
+
     const { input, output } = handlerInputOutputSchema[action.type];
     return { handler: action.handler, config: action.config, input, output };
 };
@@ -43,31 +60,33 @@ export const createRuntimeDispatcher = (plugin: OpenIgaConnector<any>) => {
     // Extism export contract: no args, returns I32 (0 = ok, 1 = error)
     return async (): Promise<0 | 1> => {
         try {
-            const hostInput = JSON.parse(Host.inputString());
-
-            const pluginDispatcherResult = z.safeParse(pluginDispatcherSchema, hostInput);
-            if (pluginDispatcherResult.error) {
-                throw new Error(
-                    `Dispatcher internals validation error: ${prettyZodError(pluginDispatcherResult.error)}`,
-                );
+            const envelopeResult = z.safeParse(envelopeSchema, JSON.parse(Host.inputString()));
+            if (envelopeResult.error) {
+                throw new Error(`Dispatcher internals validation error: ${prettyZodError(envelopeResult.error)}`);
             }
-            const { __pluginId } = pluginDispatcherResult.data;
+            const envelope = envelopeResult.data;
 
-            const operation = resolveOperation(plugin, __pluginId);
+            const operation = resolveOperation(plugin, envelope);
             if (!operation) {
-                Host.outputString(JSON.stringify({ error: `No operation registered for "${__pluginId}"` }));
+                Host.outputString(
+                    JSON.stringify({
+                        error: `No ${envelope.__kind} registered for "${envelope.__type}" on "${envelope.__managedResource}"`,
+                    }),
+                );
                 return 1;
             }
 
             const { input, output } = operation;
 
-            const hostInputResult = z.safeParse(input, hostInput);
+            const hostInputResult = z.safeParse(input, envelope.input);
             if (hostInputResult.error) {
                 throw new Error(`Host input validation error: ${prettyZodError(hostInputResult.error)}`);
             }
 
-            const pluginConfig = buildConfig(plugin.settings.config);
-            const actionConfig = operation.config ? buildConfig(operation.config) : {};
+            // Config is scoped per invocation: module config + only this operation's declared keys,
+            // both read from the envelope the Host sent for this call.
+            const pluginConfig = buildConfig(plugin.settings.config, envelope.config);
+            const actionConfig = operation.config ? buildConfig(operation.config, envelope.config) : {};
             const config = Object.freeze({ ...pluginConfig, ...actionConfig });
 
             const pluginOutput = await operation.handler({

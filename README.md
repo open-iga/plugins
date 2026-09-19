@@ -40,3 +40,18 @@ is compiled to WASM by the same toolchain. It declares:
 - **Entitlements** — `discover`, `grant`, `revoke` and `read` for assignable permissions (e.g. IAM groups).
 
 See `connectors/aws` for a complete reference implementation.
+
+## Roadmap
+
+- Following sink connectors are planned to be added
+    - Keycloak
+    - Google Workspace
+    - GitHub
+    - GitLab
+    - Jira
+    - Linear
+    - Mattermost
+    - Slack
+
+- Following source connectors are planned to be added
+    - Personio
