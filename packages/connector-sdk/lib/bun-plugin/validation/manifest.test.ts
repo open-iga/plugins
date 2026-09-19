@@ -62,7 +62,7 @@ describe('validateAndGenerateConnectorManifest', () => {
             allowedDomains: ['domain.com'],
         });
 
-        expect(() => validateAndGenerateConnectorManifest(connector)).toThrow(/Validation Failed for Plugin setting/);
+        expect(() => validateAndGenerateConnectorManifest(connector)).toThrow(/Validation Failed for connector setting/);
     });
 
     it('should throw error when connector action details are invalid', () => {
@@ -102,9 +102,8 @@ describe('validateAndGenerateConnectorManifest', () => {
         expect(manifest.name).toBe('connector');
         expect(manifest.description).toBe('desc');
         expect(manifest.allowedDomains).toEqual(['domain.com']);
-        expect(manifest.actions).toHaveLength(1);
-        expect(manifest.actions[0]).toMatchObject({
-            id: 'iam-user.account-action.create',
+        expect(Object.keys(manifest.actions)).toEqual(['iam-user']);
+        expect(manifest.actions['iam-user']!.create).toMatchObject({
             description: 'create user',
         });
     });

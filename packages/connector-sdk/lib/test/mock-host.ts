@@ -67,7 +67,7 @@ export const createMockedHost = async <const Config extends ConnectorConfig>({
         useWasi: true,
         allowedHosts: plugin.settings.allowedDomains,
         logLevel: logLevel ?? 'info',
-        config,
+        // Config is delivered per invocation in the dispatch envelope, not as ambient Extism config.
         fetch: proxy.fetch as typeof fetch,
         functions: {
             // Namespace must match the guest import (extism:host/user).
@@ -84,15 +84,16 @@ export const createMockedHost = async <const Config extends ConnectorConfig>({
 
     return {
         callAccountActions: async (managedResource, type, input) => {
-            const pluginId = plugin.createAccountActionId(managedResource, type);
-
-            proxy.setAllowedEndpoint(plugin.registry.get(pluginId)?.endpoints ?? []);
+            proxy.setAllowedEndpoint(plugin.accountActionsRegistry.get(managedResource)?.get(type)?.endpoints ?? []);
 
             const out = await wasmPlugin.call(
                 'dispatch',
                 JSON.stringify({
-                    __pluginId: pluginId,
-                    ...input,
+                    __kind: 'account-action',
+                    __managedResource: managedResource,
+                    __type: type,
+                    config,
+                    input,
                 }),
             );
             if (!out) {
@@ -104,15 +105,16 @@ export const createMockedHost = async <const Config extends ConnectorConfig>({
         },
 
         callEntitlements: async (managedResource, type, input) => {
-            const pluginId = plugin.createEntitlementId(managedResource, type);
-
-            proxy.setAllowedEndpoint(plugin.entitlementRegistry.get(pluginId)?.endpoints ?? []);
+            proxy.setAllowedEndpoint(plugin.entitlementRegistry.get(managedResource)?.get(type)?.endpoints ?? []);
 
             const out = await wasmPlugin.call(
                 'dispatch',
                 JSON.stringify({
-                    __pluginId: pluginId,
-                    ...(input ?? {}),
+                    __kind: 'entitlement',
+                    __managedResource: managedResource,
+                    __type: type,
+                    config,
+                    input: input ?? {},
                 }),
             );
             if (!out) {

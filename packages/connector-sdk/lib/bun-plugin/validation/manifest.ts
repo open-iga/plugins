@@ -13,19 +13,19 @@ import { connectorSettingsSchema } from '../../iga/connector/validation-schema/c
  * */
 const CONFIG_PLACEHOLDERS = /\{\{\s*([A-Za-z0-9_-]+)\s*\}\}/g;
 
+// One primitive (create/enable/.../grant/...) as exposed in the manifest. The managed
+// resource and the operation type are the keys, so they are not repeated inside.
+type ManifestOperation = Pick<z.infer<typeof connectorAccountActionSchema>, 'description' | 'endpoints' | 'config'>;
+
+// Keyed by managed resource, then by operation type:
+//   actions: { "iam-user": { "create": {...}, "enable": {...} } }
 type Manifest = {
     name: string;
     description: string;
     config: ConnectorConfig;
     allowedDomains: string[];
-    actions: ({ id: string } & Pick<
-        z.infer<typeof connectorAccountActionSchema>,
-        'description' | 'endpoints' | 'config'
-    >)[];
-    entitlements: ({ id: string } & Pick<
-        z.infer<typeof connectorEntitlementSchema>,
-        'description' | 'endpoints' | 'config'
-    >)[];
+    actions: Record<string, Record<string, ManifestOperation>>;
+    entitlements: Record<string, Record<string, ManifestOperation>>;
 };
 
 /**
@@ -80,39 +80,43 @@ export const validateAndGenerateConnectorManifest = (connector: unknown): Manife
     }
 
     const { name, config, description, allowedDomains } = settingsResult.data;
-    const manifest: Manifest = { name, description, config, allowedDomains, actions: [], entitlements: [] };
+    const manifest: Manifest = { name, description, config, allowedDomains, actions: {}, entitlements: {} };
 
-    [...connector.registry].forEach(([name, action]) => {
-        const [managedResource, actionName] = connector.getAccountActionsDetails(name);
+    for (const [managedResource, accountActionConfig] of connector.accountActionsRegistry) {
+        for (const [actionType, action] of accountActionConfig) {
+            const result = connectorAccountActionSchema.safeParse(action);
+            if (!result.success) {
+                throw new Error(
+                    `Validation failed for action type ${actionType} in the managed resource ${managedResource}. Reason: ${z.prettifyError(result.error)}`,
+                );
+            }
 
-        const result = connectorAccountActionSchema.safeParse(action);
-        if (!result.success) {
-            throw new Error(
-                `Validation failed for action type ${actionName} in the managed resource ${managedResource}. Reason: ${z.prettifyError(result.error)}`,
-            );
+            const { endpoints, description, config } = result.data;
+
+            validateConfigPlaceHolder({ endpoints, config: [...settingsResult.data.config, ...(config ?? [])] });
+            (manifest.actions[managedResource] ??= {})[actionType] = { endpoints, description, config: config ?? [] };
         }
+    }
 
-        const { endpoints, description, config } = result.data;
+    for (const [managedResource, entitlementConfig] of connector.entitlementRegistry) {
+        for (const [entitlementType, entitlement] of entitlementConfig) {
+            const result = connectorEntitlementSchema.safeParse(entitlement);
+            if (!result.success) {
+                throw new Error(
+                    `Validation failed for entitlement type ${entitlementType} in the managed resource ${managedResource}. Reason: ${z.prettifyError(result.error)}`,
+                );
+            }
 
-        validateConfigPlaceHolder({ endpoints, config: [...settingsResult.data.config, ...(config ?? [])] });
-        manifest.actions.push({ id: name, endpoints, description, config: config ?? [] });
-    });
+            const { endpoints, description, config } = result.data;
 
-    [...connector.entitlementRegistry].forEach(([name, entitlement]) => {
-        const [managedResource, entitlementType] = connector.getEntitlementDetails(name);
-
-        const result = connectorEntitlementSchema.safeParse(entitlement);
-        if (!result.success) {
-            throw new Error(
-                `Validation failed for entitlement type ${entitlementType} in the managed resource ${managedResource}. Reason: ${z.prettifyError(result.error)}`,
-            );
+            validateConfigPlaceHolder({ endpoints, config: [...settingsResult.data.config, ...(config ?? [])] });
+            (manifest.entitlements[managedResource] ??= {})[entitlementType] = {
+                endpoints,
+                description,
+                config: config ?? [],
+            };
         }
-
-        const { endpoints, description, config } = result.data;
-
-        validateConfigPlaceHolder({ endpoints, config: [...settingsResult.data.config, ...(config ?? [])] });
-        manifest.entitlements.push({ id: name, endpoints, description, config: config ?? [] });
-    });
+    }
 
     return manifest;
 };

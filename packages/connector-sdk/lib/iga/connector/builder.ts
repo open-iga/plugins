@@ -48,10 +48,9 @@ export type Entitlement<
 };
 
 export class OpenIgaConnector<const Config extends ConnectorConfig> {
-    readonly registry = new Map<string, AccountAction<Config, ConnectorConfig>>();
-    readonly entitlementRegistry = new Map<string, Entitlement<Config, ConnectorConfig>>();
-    private readonly accountActionDelimiter = '.account-action.';
-    private readonly entitlementDelimiter = '.entitlement.';
+    // Keyed managed resource → operation type → operation, mirroring the manifest shape.
+    readonly accountActionsRegistry = new Map<string, Map<string, AccountAction<Config, ConnectorConfig>>>();
+    readonly entitlementRegistry = new Map<string, Map<string, Entitlement<Config, ConnectorConfig>>>();
 
     constructor(readonly settings: Omit<ConnectorSettings, 'config'> & { config: Config }) {}
 
@@ -60,10 +59,11 @@ export class OpenIgaConnector<const Config extends ConnectorConfig> {
         const Type extends ConnectorAccountAction['type'] = ConnectorAccountAction['type'],
     >(managedResource: string, action: AccountAction<Config, ActionConfig, Type>) {
         // The registry is type-erased over Type/ActionConfig; the dispatcher validates at runtime.
-        this.registry.set(
-            this.createAccountActionId(managedResource, action.type),
-            action as unknown as AccountAction<Config, ConnectorConfig>,
-        );
+        const accountActionConfigByType =
+            this.accountActionsRegistry.get(managedResource) ??
+            new Map<string, AccountAction<Config, ConnectorConfig>>();
+        accountActionConfigByType.set(action.type, action as unknown as AccountAction<Config, ConnectorConfig>);
+        this.accountActionsRegistry.set(managedResource, accountActionConfigByType);
 
         return this;
     }
@@ -72,37 +72,11 @@ export class OpenIgaConnector<const Config extends ConnectorConfig> {
         const ActionConfig extends ConnectorConfig = [],
         const Type extends ConnectorEntitlement['type'] = ConnectorEntitlement['type'],
     >(managedResource: string, entitlement: Entitlement<Config, ActionConfig, Type>) {
-        this.entitlementRegistry.set(
-            this.createEntitlementId(managedResource, entitlement.type),
-            entitlement as unknown as Entitlement<Config, ConnectorConfig>,
-        );
+        const entitlementConfigByType =
+            this.entitlementRegistry.get(managedResource) ?? new Map<string, Entitlement<Config, ConnectorConfig>>();
+        entitlementConfigByType.set(entitlement.type, entitlement as unknown as Entitlement<Config, ConnectorConfig>);
+        this.entitlementRegistry.set(managedResource, entitlementConfigByType);
 
         return this;
     }
-
-    createAccountActionId(managedResource: string, type: AccountAction['type']) {
-        return `${managedResource}${this.accountActionDelimiter}${type}`;
-    }
-
-    createEntitlementId(managedResource: string, type: Entitlement['type']) {
-        return `${managedResource}${this.entitlementDelimiter}${type}`;
-    }
-
-    getAccountActionsDetails = (name: string): [string, string] => {
-        const split = name.split(this.accountActionDelimiter);
-        if (split.length !== 2) {
-            throw new Error(`Unable to get managed resource details for ${name}`);
-        }
-
-        return [split[0]!, split[1]!];
-    };
-
-    getEntitlementDetails = (name: string): [string, string] => {
-        const split = name.split(this.entitlementDelimiter);
-        if (split.length !== 2) {
-            throw new Error(`Unable to get managed resource details for ${name}`);
-        }
-
-        return [split[0]!, split[1]!];
-    };
 }

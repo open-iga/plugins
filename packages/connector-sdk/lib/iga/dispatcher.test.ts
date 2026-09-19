@@ -9,7 +9,6 @@ import type { ConnectorConfig } from './connector/validation-schema/connector.co
  */
 let hostInput = '';
 let hostOutput = '';
-let hostConfig: Record<string, string> = {};
 
 const setHostInput = (value: unknown) => {
     hostInput = JSON.stringify(value);
@@ -39,13 +38,12 @@ const buildPlugin = (
         handler,
     });
 
-const pluginId = 'iam-user.account-action.create';
+const routing = { __kind: 'account-action', __managedResource: 'iam-user', __type: 'create' } as const;
 
 describe('createRuntimeDispatcher', () => {
     beforeEach(() => {
         hostInput = '';
         hostOutput = '';
-        hostConfig = {};
 
         (globalThis as any).Host = {
             inputString: () => hostInput,
@@ -53,12 +51,9 @@ describe('createRuntimeDispatcher', () => {
                 hostOutput = value;
             },
         };
-        (globalThis as any).Config = {
-            get: (name: string) => hostConfig[name] ?? null,
-        };
     });
 
-    it('should throw error if the __pluginId is not provided by the host', async () => {
+    it('should throw error if the routing fields are not provided by the host', async () => {
         const dispatch = createRuntimeDispatcher(buildPlugin());
         setHostInput({ ...validInput });
 
@@ -68,20 +63,20 @@ describe('createRuntimeDispatcher', () => {
         expect(readHostOutput().error).toMatch(/Dispatcher internals validation error/);
     });
 
-    it('should throw error if the __pluginId is missing in the registry', async () => {
+    it('should throw error if the routing target is missing in the registry', async () => {
         const dispatch = createRuntimeDispatcher(buildPlugin());
-        setHostInput({ __pluginId: 'unknown.account-action.create', ...validInput });
+        setHostInput({ __kind: 'account-action', __managedResource: 'unknown', __type: 'create', config: {}, input: validInput });
 
         const code = await dispatch();
 
         expect(code).toBe(1);
-        expect(readHostOutput().error).toMatch(/No account action registered for "unknown.account-action.create"/);
+        expect(readHostOutput().error).toMatch(/No account-action registered for "create" on "unknown"/);
     });
 
     it('should throw error if the input in handler is invalid', async () => {
         const dispatch = createRuntimeDispatcher(buildPlugin());
         // email is not a valid email address
-        setHostInput({ __pluginId: pluginId, email: 'not-an-email', firstname: 'test', lastname: 'user' });
+        setHostInput({ ...routing, config: {}, input: { email: 'not-an-email', firstname: 'test', lastname: 'user' } });
 
         const code = await dispatch();
 
@@ -93,8 +88,8 @@ describe('createRuntimeDispatcher', () => {
         const dispatch = createRuntimeDispatcher(
             buildPlugin(() => ({ id: 'user-1' }) as never, [{ name: 'REGION', description: 'region', required: true }]),
         );
-        setHostInput({ __pluginId: pluginId, ...validInput });
-        // REGION intentionally left out of hostConfig
+        setHostInput({ ...routing, config: {}, input: validInput });
+        // REGION intentionally left out of the envelope config
 
         const code = await dispatch();
 
@@ -105,7 +100,7 @@ describe('createRuntimeDispatcher', () => {
     it('should throw error if the output from handler is not valid', async () => {
         // handler returns an object missing the required `id`
         const dispatch = createRuntimeDispatcher(buildPlugin(() => ({}) as never));
-        setHostInput({ __pluginId: pluginId, ...validInput });
+        setHostInput({ ...routing, config: {}, input: validInput });
 
         const code = await dispatch();
 
@@ -124,8 +119,7 @@ describe('createRuntimeDispatcher', () => {
                 [{ name: 'REGION', description: 'region', required: true }],
             ),
         );
-        hostConfig = { REGION: 'us-east-1' };
-        setHostInput({ __pluginId: pluginId, ...validInput });
+        setHostInput({ ...routing, config: { REGION: 'us-east-1' }, input: validInput });
 
         const code = await dispatch();
 
