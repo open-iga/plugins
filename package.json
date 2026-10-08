@@ -6,6 +6,7 @@
             "packages/*"
         ],
         "catalog": {
+            "@changesets/cli": "3.0.3",
             "@extism/js-pdk": "1.1.1",
             "@extism/extism": "2.0.0-rc13",
             "@noble/hashes": "2.2.0",
@@ -24,9 +25,15 @@
     },
     "type": "module",
     "scripts": {
-        "test": "turbo run test"
+        "test": "turbo run test",
+        "compile": "turbo run compile",
+        "lint": "oxlint",
+        "changeset": "changeset",
+        "version-packages": "changeset version",
+        "tag-packages": "changeset git-tag"
     },
     "devDependencies": {
+        "@changesets/cli": "catalog:",
         "@extism/js-pdk": "catalog:",
         "oxfmt": "catalog:",
         "oxlint": "catalog:",

@@ -1,0 +1,41 @@
+name: PR
+
+on:
+    pull_request:
+        branches: [main]
+
+jobs:
+    ci:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - uses: oven-sh/setup-bun@v2
+
+            - name: Install extism-js
+              run: curl -Ls https://raw.githubusercontent.com/extism/js-pdk/main/install.sh | bash
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            - name: Lint, test and compile
+              run: bunx turbo run "//#lint" test compile
+
+    changeset-check:
+        runs-on: ubuntu-latest
+        # Version PRs (changeset-release/*) and dependency bots don't carry changesets
+        if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
+        steps:
+            - uses: actions/checkout@v6
+              with:
+                  fetch-depth: 0
+
+            - uses: oven-sh/setup-bun@v2
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            - name: Check for changesets
+              # Fails when packages under connectors/ or packages/ changed
+              # without a changeset
+              run: bunx changeset status --since="origin/${{ github.base_ref }}"

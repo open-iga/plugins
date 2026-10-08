@@ -4,6 +4,11 @@
     "tasks": {
         "test": {
             "dependsOn": ["^test"]
-        }
+        },
+        "compile": {
+            "dependsOn": ["^compile"],
+            "outputs": [".open-iga/**"]
+        },
+        "//#lint": {}
     }
 }

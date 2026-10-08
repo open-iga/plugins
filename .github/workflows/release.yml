@@ -1,0 +1,51 @@
+name: Release
+
+on:
+    push:
+        branches: [main]
+
+permissions:
+    contents: write
+    pull-requests: write
+
+jobs:
+    release:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - uses: oven-sh/setup-bun@v2
+
+            - name: Install extism-js
+              run: curl -Ls https://raw.githubusercontent.com/extism/js-pdk/main/install.sh | bash
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            - name: Create Version PR or GitHub release
+              id: changesets
+              uses: changesets/action@v1
+              with:
+                  version: bun run version-packages
+                  publish: bun run tag-packages
+                  createGithubReleases: true
+                  commit: "chore: version packages"
+                  title: "chore: version packages"
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Compile
+              if: steps.changesets.outputs.published == 'true'
+              run: bunx turbo run compile
+
+            - name: Upload wasm + sha256 to the GitHub release
+              if: steps.changesets.outputs.published == 'true'
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  TAG="@open-iga/aws@$(jq -r .version connectors/aws/package.json)"
+                  cd connectors/aws/.open-iga
+                  sha256sum aws.wasm > aws.wasm.sha256
+                  gh release upload "$TAG" --clobber aws.wasm aws.wasm.sha256
