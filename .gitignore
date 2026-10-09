@@ -40,3 +40,8 @@ yarn-error.log*
 
 # open-iga dist
 .open-iga
+
+# extism-js installer drops the binaryen toolchain into the workspace;
+# keep it out of the Version PR the changesets action commits
+binaryen/
+binaryen-version_*.tar.gz
