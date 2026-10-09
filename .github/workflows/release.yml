@@ -60,6 +60,6 @@ jobs:
                   fi
                   bunx turbo run compile
                   cd connectors/aws/.open-iga
-                  sha256sum aws.wasm > aws.wasm.sha256
+                  sha256sum aws.wasm | cut -d' ' -f1 > aws.wasm.hash.txt
                   gh release create "$TAG" --title "$TAG" --generate-notes \
                       aws.wasm aws.wasm.sha256
