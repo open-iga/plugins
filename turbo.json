@@ -3,7 +3,12 @@
     "ui": "tui",
     "tasks": {
         "test": {
-            "dependsOn": ["^test"]
-        }
+            "dependsOn": ["^test", "compile"]
+        },
+        "compile": {
+            "dependsOn": ["^compile"],
+            "outputs": [".open-iga/**"]
+        },
+        "//#lint": {}
     }
 }

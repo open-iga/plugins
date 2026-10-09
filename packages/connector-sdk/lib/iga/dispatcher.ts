@@ -54,12 +54,20 @@ const resolveOperation = (
  * TODO: Return error code from the dispatcher for the Host to categorize
  */
 export const createRuntimeDispatcher = (plugin: OpenIgaConnector<any>) => {
-    // Guarantee the runtime globals connectors rely on (Request, WebCrypto HMAC).
-    installRuntimePolyfills();
+    // Polyfills run once, on first dispatch — not at module init: extism-js snapshots the
+    // guest with Wizer, and touching host-backed globals (crypto) during init traps ("cannot
+    // call imported functions during Wizer initialization").
+    let polyfilled = false;
 
     // Extism export contract: no args, returns I32 (0 = ok, 1 = error)
     return async (): Promise<0 | 1> => {
         try {
+            // Guarantee the runtime globals connectors rely on (Request, WebCrypto HMAC).
+            if (!polyfilled) {
+                installRuntimePolyfills();
+                polyfilled = true;
+            }
+
             const envelopeResult = z.safeParse(envelopeSchema, JSON.parse(Host.inputString()));
             if (envelopeResult.error) {
                 throw new Error(`Dispatcher internals validation error: ${prettyZodError(envelopeResult.error)}`);

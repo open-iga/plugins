@@ -1,6 +1,7 @@
 {
     "name": "@open-iga/connector-sdk",
     "version": "0.0.1",
+    "private": true,
     "description": "A wrapper around the toolchain to provide a seamless DX for plugin development",
     "bin": {
         "open-iga": "lib/cli/bin.ts"

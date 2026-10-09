@@ -6,7 +6,7 @@
 // oxlint-disable-next-line typescript/triple-slash-reference
 /// <reference path="../extism-jspdk.d.ts" />
 
-// --- fetch (native, host-backed; extism omits it) ----------------------------------
+// --- fetch (GUARANTEED by the SDK polyfill over Http.request; extism omits it) ------
 interface FetchResponse {
     readonly status: number;
     readonly ok: boolean;
@@ -18,7 +18,7 @@ declare function fetch(
     init?: { method?: string; headers?: Record<string, string>; body?: string },
 ): Promise<FetchResponse>;
 
-// --- Headers (native; extism omits it) ---------------------------------------------
+// --- Headers (GUARANTEED by the SDK polyfill; extism omits it) ----------------------
 type HeadersInit = Headers | Record<string, string> | [string, string][];
 interface Headers {
     append(name: string, value: string): void;
@@ -47,8 +47,9 @@ declare var Request: {
     ): Request;
 };
 
-// --- crypto (digest + getRandomValues native; HMAC GUARANTEED by the SDK polyfill) --
-// NOTE: signing is HMAC-SHA256 only — the polyfill throws on any other algorithm.
+// --- crypto (GUARANTEED by the SDK polyfill; extism omits it entirely) --------------
+// NOTE: the polyfill supports SHA-256 digest and HMAC-SHA256 sign/importKey only, and
+// throws on any other algorithm; getRandomValues is best-effort (see webcrypto.ts).
 interface SubtleCrypto {
     digest(algorithm: string | { name: string }, data: ArrayBuffer | ArrayBufferView): Promise<ArrayBuffer>;
     importKey(

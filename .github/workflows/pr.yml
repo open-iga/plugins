@@ -1,0 +1,54 @@
+name: PR
+
+on:
+    pull_request:
+        branches: [main]
+
+jobs:
+    ci:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+
+            - uses: oven-sh/setup-bun@v2
+
+            - name: Install extism-js
+              env:
+                  # Version is pinned in package.json (config.extism-js-version);
+                  # the checksum verifies the installer at that tag before it runs.
+                  INSTALLER_SHA256: c395d700898249a49c54072950fbd2d0e4d3719acf5b4390f1cb142680ec1f05
+                  # The installer downloads the extism-js binary separately (unverified), so
+                  # also pin the installed binary. Linux x86_64 asset for the tag above; a
+                  # changed release asset mismatches here and fails before it ever compiles.
+                  EXTISM_JS_SHA256: 4552ee7385d2f0583363448c9e45aa733dec8d7edac8d646b69ee1271ad09483
+              run: |
+                  EXTISM_JS_TAG="$(jq -r '.config["extism-js-version"]' package.json)"
+                  curl -fLs "https://raw.githubusercontent.com/extism/js-pdk/${EXTISM_JS_TAG}/install.sh" -o /tmp/extism-install.sh
+                  echo "${INSTALLER_SHA256}  /tmp/extism-install.sh" | sha256sum -c -
+                  bash /tmp/extism-install.sh "$EXTISM_JS_TAG"
+                  echo "${EXTISM_JS_SHA256}  $(command -v extism-js)" | sha256sum -c -
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            - name: Lint, test and compile
+              run: bunx turbo run "//#lint" test compile
+
+    changeset-check:
+        runs-on: ubuntu-latest
+        # Version PRs (changeset-release/*) and dependency bots don't carry changesets
+        if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
+        steps:
+            - uses: actions/checkout@v6
+              with:
+                  fetch-depth: 0
+
+            - uses: oven-sh/setup-bun@v2
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            - name: Check for changesets
+              # Fails when packages under connectors/ or packages/ changed
+              # without a changeset
+              run: bunx changeset status --since="origin/${{ github.base_ref }}"

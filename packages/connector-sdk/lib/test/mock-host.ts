@@ -1,5 +1,8 @@
-// Bun capability has supportsWasiPreview1: false, so importing from NodeJS ESM
-import { createPlugin } from '../../../../node_modules/@extism/extism/dist/esm/mod.js';
+// Bun's extism build has supportsWasiPreview1: false, so the Node ESM build is
+// required. Resolve via require.resolve — the package's `exports` map blocks deep
+// subpath imports, and a hardcoded relative node_modules path breaks under
+// isolated (symlinked) install layouts.
+import { createRequire } from 'node:module';
 import type { OpenIgaConnector, RuntimeConfig } from '../iga/connector/builder.ts';
 import * as path from 'node:path';
 import { OUT_DIR } from '../cli/compile.ts';
@@ -59,6 +62,10 @@ export const createMockedHost = async <const Config extends ConnectorConfig>({
 }): Promise<MockedHost> => {
     const wasmPath = path.join(process.cwd(), OUT_DIR, `${plugin.settings.name}.wasm`);
     const proxy = createFetchProxy(mockUpstream, config);
+
+    const require = createRequire(import.meta.url);
+    const extismEsmMod = path.join(path.dirname(require.resolve('@extism/extism')), '..', 'esm', 'mod.js');
+    const { createPlugin } = (await import(extismEsmMod)) as typeof import('@extism/extism');
 
     // Records what the connector passed to the Host email capability so tests can assert on it.
     const sentEmails: EmailPayload[] = [];
