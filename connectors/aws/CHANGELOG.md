@@ -1,5 +1,11 @@
 # @open-iga/aws
 
+## 0.1.2
+
+### Patch Changes
+
+- 0adda51: Adjust connector name
+
 ## 0.1.1
 
 ### Patch Changes
