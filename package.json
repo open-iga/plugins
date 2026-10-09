@@ -29,8 +29,7 @@
         "compile": "turbo run compile",
         "lint": "oxlint",
         "changeset": "changeset",
-        "version-packages": "changeset version",
-        "tag-packages": "changeset git-tag"
+        "version-packages": "changeset version"
     },
     "devDependencies": {
         "@changesets/cli": "catalog:",

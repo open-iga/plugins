@@ -38,28 +38,28 @@ jobs:
             - name: Install dependencies
               run: bun install --frozen-lockfile
 
-            - name: Create Version PR or GitHub release
+            - name: Create Version PR
               id: changesets
               uses: changesets/action@v1
               with:
                   version: bun run version-packages
-                  publish: bun run tag-packages
-                  createGithubReleases: true
-                  commit: "chore: version packages"
-                  title: "chore: version packages"
+                  commit: 'chore: version packages'
+                  title: 'chore: version packages'
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Compile
-              if: steps.changesets.outputs.published == 'true'
-              run: bunx turbo run compile
-
-            - name: Upload wasm + sha256 to the GitHub release
-              if: steps.changesets.outputs.published == 'true'
+            - name: Compile and publish GitHub release
+              if: steps.changesets.outputs.hasChangesets == 'false'
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   TAG="@open-iga/aws@$(jq -r .version connectors/aws/package.json)"
+                  if gh release view "$TAG" >/dev/null 2>&1; then
+                      echo "Release $TAG already exists; nothing to do."
+                      exit 0
+                  fi
+                  bunx turbo run compile
                   cd connectors/aws/.open-iga
                   sha256sum aws.wasm > aws.wasm.sha256
-                  gh release upload "$TAG" --clobber aws.wasm aws.wasm.sha256
+                  gh release create "$TAG" --title "$TAG" --generate-notes \
+                      aws.wasm aws.wasm.sha256
