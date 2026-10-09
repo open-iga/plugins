@@ -10,7 +10,7 @@ import { registerEntitlementRevoke } from './entitlements/iam-user-groups/revoke
 import { registerEntitlementRead } from './entitlements/iam-user-groups/read.ts';
 
 export const awsConnector = new OpenIgaConnector({
-    name: 'aws',
+    name: 'AWS',
     description: 'AWS plugin for OpenIGA core',
     config: [
         { name: 'AWS_REGION', description: 'AWS region', required: true },
