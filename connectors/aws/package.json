@@ -1,6 +1,6 @@
 {
     "name": "@open-iga/aws",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "type": "module",
     "scripts": {
         "compile": "open-iga compile --entryPoint src/aws-connector.ts",
