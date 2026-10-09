@@ -42,6 +42,10 @@
         "turbo": "catalog:",
         "typescript": "catalog:"
     },
+    "config": {
+        "//extism-js-version": "Single source of truth for the extism-js CLI version used by CI workflows (the CLI is not on npm). Must stay compatible with the catalog's @extism/extism runtime — js-pdk > 1.5.1 emits wasm that 2.0.0-rc13 cannot parse. When bumping, update INSTALLER_SHA256 in .github/workflows/*.",
+        "extism-js-version": "v1.5.1"
+    },
     "engines": {
         "bun": ">=1.4.0"
     },

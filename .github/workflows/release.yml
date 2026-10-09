@@ -19,7 +19,16 @@ jobs:
             - uses: oven-sh/setup-bun@v2
 
             - name: Install extism-js
-              run: curl -Ls https://raw.githubusercontent.com/extism/js-pdk/main/install.sh | bash
+              env:
+                  # Version is pinned in package.json (config.extism-js-version);
+                  # the checksum verifies the installer at that tag before it
+                  # runs with this job's write token.
+                  INSTALLER_SHA256: c395d700898249a49c54072950fbd2d0e4d3719acf5b4390f1cb142680ec1f05
+              run: |
+                  EXTISM_JS_TAG="$(jq -r '.config["extism-js-version"]' package.json)"
+                  curl -fLs "https://raw.githubusercontent.com/extism/js-pdk/${EXTISM_JS_TAG}/install.sh" -o /tmp/extism-install.sh
+                  echo "${INSTALLER_SHA256}  /tmp/extism-install.sh" | sha256sum -c -
+                  bash /tmp/extism-install.sh "$EXTISM_JS_TAG"
 
             - name: Install dependencies
               run: bun install --frozen-lockfile
