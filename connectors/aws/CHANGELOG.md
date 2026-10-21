@@ -1,5 +1,11 @@
 # @open-iga/aws
 
+## 0.2.0
+
+### Minor Changes
+
+- 2b5c2cc: Move polyfill installation to buildtime
+
 ## 0.1.2
 
 ### Patch Changes
