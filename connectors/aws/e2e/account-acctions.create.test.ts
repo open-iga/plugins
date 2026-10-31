@@ -2,6 +2,8 @@ import { createMockedHost, type MockedHost } from '@open-iga/connector-sdk/test'
 import { awsConnector } from '../src/aws-connector.ts';
 import { getLoginProfile } from '../src/utils/iam.login-profile.ts';
 
+const tenant = { id: '000000000000' };
+
 describe('account-actions.create', () => {
     let host: MockedHost;
 
@@ -25,6 +27,7 @@ describe('account-actions.create', () => {
     it('should create an iam user with temporary credentials', async () => {
         const email = `test.user@openiga.dev`;
         const result = await host.callAccountActions('iam-user', 'create', {
+            tenant,
             email,
             firstname: 'test',
             lastname: 'user',
@@ -56,28 +59,54 @@ describe('account-actions.create', () => {
         expect(profile.passwordResetRequired).toBe(true);
     });
 
-    it('should return an error for a duplicate email', async () => {
+    it('should return the existing user without creating a new one for a duplicate email', async () => {
         const email = `test.dup-user@openiga.dev`;
         const firstname = 'test';
         const lastname = 'dup-user';
 
-        const first = await host.callAccountActions('iam-user', 'create', { email, firstname, lastname });
+        const first = await host.callAccountActions('iam-user', 'create', { tenant, email, firstname, lastname });
+        expect(first.ok).toBe(true);
+        // for type-safety
+        if (!first.ok) return;
+        expect(first.output.created).toBe(true);
+
+        const emailsBefore = host.hostFunctions.sentEmails.length;
+        const second = await host.callAccountActions('iam-user', 'create', { tenant, email, firstname, lastname });
+
+        expect(second.ok).toBe(true);
+        if (second.ok) {
+            expect(second.output).toEqual({ id: first.output.id, created: false });
+        }
+        // No new password is sent for an existing user
+        expect(host.hostFunctions.sentEmails.length).toBe(emailsBefore);
+    });
+
+    it('should not adopt an existing user that belongs to a different email', async () => {
+        const first = await host.callAccountActions('iam-user', 'create', {
+            tenant,
+            email: 'same.name@openiga.dev',
+            firstname: 'a',
+            lastname: 'b',
+        });
         expect(first.ok).toBe(true);
 
+        // Same IAM username (the email's first part), different person
         const second = await host.callAccountActions('iam-user', 'create', {
-            email,
-            firstname,
-            lastname,
+            tenant,
+            email: 'same.name@other.dev',
+            firstname: 'c',
+            lastname: 'd',
         });
 
         expect(second.ok).toBe(false);
         if (!second.ok) {
-            expect(second.error).toContain('409');
+            expect(second.error).toContain('not tagged');
         }
     });
 
     it('should reject invalid input before calling the upstream', async () => {
         const result = await host.callAccountActions('iam-user', 'create', {
+            tenant,
             email: 'not-an-email',
             firstname: 'Foo',
             lastname: 'Bar',
@@ -102,6 +131,7 @@ describe('account-actions.create', () => {
         });
 
         const result = await hostWithoutRole.callAccountActions('iam-user', 'create', {
+            tenant,
             email: 'no-role@openiga.dev',
             firstname: 'Foo',
             lastname: 'Bar',
