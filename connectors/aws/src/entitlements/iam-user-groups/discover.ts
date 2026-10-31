@@ -1,4 +1,5 @@
 import type awsConnector from '../../aws-connector.ts';
+import { GROUP_DISCOVERY_ROLE } from '../../utils/role-config.ts';
 import { assumeRole } from '../../utils/sts.ts';
 import { IAM_ENDPOINT, stsEndpoint, IAM_ACTION_ENDPOINTS } from '../../utils/aws-endpoints.ts';
 import { listGroups } from '../../utils/iam.group.ts';
@@ -27,11 +28,7 @@ export const registerEntitlementDiscover = (plugin: typeof awsConnector) => {
         description: 'Discover assignable IAM user groups for the entitlement catalog',
         endpoints: IAM_ACTION_ENDPOINTS,
         config: [
-            {
-                name: 'AWS_GROUP_DISCOVERY_ROLE',
-                description: 'ARN of the least-privilege role assumed (via STS) to list IAM user groups',
-                required: true,
-            },
+            GROUP_DISCOVERY_ROLE,
             {
                 name: 'AWS_GROUP_EXCLUDE_PATTERNS',
                 description: `
@@ -43,7 +40,7 @@ export const registerEntitlementDiscover = (plugin: typeof awsConnector) => {
                 required: false,
             },
         ],
-        handler: async ({ config }) => {
+        handler: async ({ config, input }) => {
             const region = resolveRegion(config.AWS_REGION);
 
             const excludePatterns = parseExcludePatterns(config.AWS_GROUP_EXCLUDE_PATTERNS);
@@ -59,10 +56,16 @@ export const registerEntitlementDiscover = (plugin: typeof awsConnector) => {
                 roleSessionName: 'openiga-aws-iam-user-group-discover',
             });
 
-            const groups = await listGroups({ endpoint: IAM_ENDPOINT, credentials: assumed });
+            // The AWS marker is the cursor: one page per call
+            const { groups, nextMarker } = await listGroups({
+                endpoint: IAM_ENDPOINT,
+                credentials: assumed,
+                marker: input.cursor,
+            });
 
             const catalog = groups.filter(
-                (group) => !excludePatterns.some((pattern) => pattern.test(group.groupName) || pattern.test(group.path)),
+                (group) =>
+                    !excludePatterns.some((pattern) => pattern.test(group.groupName) || pattern.test(group.path)),
             );
 
             return {
@@ -70,6 +73,7 @@ export const registerEntitlementDiscover = (plugin: typeof awsConnector) => {
                     entitlementId: group.arn,
                     name: group.groupName,
                 })),
+                ...(nextMarker ? { nextCursor: nextMarker } : {}),
             };
         },
     });

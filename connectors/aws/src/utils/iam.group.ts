@@ -39,31 +39,31 @@ const listGroupsResponseSchema = z.object({
 });
 
 // https://docs.aws.amazon.com/IAM/latest/APIReference/API_ListGroups.html
+// One page of groups; `nextMarker` is set while more pages remain.
 export const listGroups = async ({
     endpoint,
     credentials,
-}: Pick<IamUserOptions, 'endpoint' | 'credentials'>): Promise<IamGroup[]> => {
-    const groups: IamGroup[] = [];
-    let marker: string | undefined;
+    marker,
+}: Pick<IamUserOptions, 'endpoint' | 'credentials'> & { marker?: string | undefined }): Promise<{
+    groups: IamGroup[];
+    nextMarker?: string;
+}> => {
+    const { ListGroupsResponse } = await awsRequest({
+        endpoint,
+        region: IAM_SIGNING_REGION,
+        service: 'iam',
+        action: 'ListGroups',
+        version: IAM_API_VERSION,
+        credentials,
+        params: { Marker: marker },
+        schema: listGroupsResponseSchema,
+    });
 
-    do {
-        const { ListGroupsResponse } = await awsRequest({
-            endpoint,
-            region: IAM_SIGNING_REGION,
-            service: 'iam',
-            action: 'ListGroups',
-            version: IAM_API_VERSION,
-            credentials,
-            params: { Marker: marker },
-            schema: listGroupsResponseSchema,
-        });
-
-        const { IsTruncated, Marker, Groups } = ListGroupsResponse.ListGroupsResult;
-        groups.push(...toIamGroups(Groups));
-        marker = IsTruncated === 'true' ? Marker : undefined;
-    } while (marker);
-
-    return groups;
+    const { IsTruncated, Marker, Groups } = ListGroupsResponse.ListGroupsResult;
+    return {
+        groups: toIamGroups(Groups),
+        ...(IsTruncated === 'true' && Marker ? { nextMarker: Marker } : {}),
+    };
 };
 
 const listGroupsForUserResponseSchema = z.object({

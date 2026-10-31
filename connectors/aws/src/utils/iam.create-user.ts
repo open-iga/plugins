@@ -2,6 +2,8 @@ import * as z from 'zod/mini';
 import { awsRequest, type AwsCredentials } from './client.ts';
 import { IAM_API_VERSION, IAM_SIGNING_REGION } from './iam.common.ts';
 
+export const EMAIL_TAG = 'Email';
+
 // Parsed CreateUser XML: arn is required (it is the account's stable id)
 const createUserResponseSchema = z.object({
     CreateUserResponse: z.object({
@@ -19,6 +21,8 @@ export interface CreateUserOptions {
     endpoint: string;
     credentials: AwsCredentials;
     userName: string;
+    // Saved as the user's `Email` tag, since IAM has no email field.
+    email: string;
 }
 
 export interface CreatedUser {
@@ -28,7 +32,12 @@ export interface CreatedUser {
 }
 
 // https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateUser.html
-export const createUser = async ({ endpoint, credentials, userName }: CreateUserOptions): Promise<CreatedUser> => {
+export const createUser = async ({
+    endpoint,
+    credentials,
+    userName,
+    email,
+}: CreateUserOptions): Promise<CreatedUser> => {
     const { CreateUserResponse } = await awsRequest({
         endpoint: endpoint,
         region: IAM_SIGNING_REGION,
@@ -36,7 +45,7 @@ export const createUser = async ({ endpoint, credentials, userName }: CreateUser
         action: 'CreateUser',
         version: IAM_API_VERSION,
         credentials: credentials,
-        params: { UserName: userName },
+        params: { UserName: userName, 'Tags.member.1.Key': EMAIL_TAG, 'Tags.member.1.Value': email },
         schema: createUserResponseSchema,
     });
 
