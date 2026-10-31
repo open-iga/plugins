@@ -27,6 +27,7 @@
     "scripts": {
         "test": "turbo run test",
         "compile": "turbo run compile",
+        "typecheck": "turbo run typecheck",
         "lint": "oxlint",
         "changeset": "changeset",
         "version-packages": "changeset version"
@@ -46,7 +47,7 @@
         "extism-js-version": "v1.5.1"
     },
     "engines": {
-        "bun": ">=1.4.0"
+        "bun": ">=1.4.4"
     },
     "packageManager": "bun@1.4.0"
 }

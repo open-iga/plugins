@@ -9,6 +9,9 @@
             "dependsOn": ["^compile"],
             "outputs": [".open-iga/**"]
         },
-        "//#lint": {}
+        "//#lint": {},
+        "typecheck": {
+            "dependsOn": ["^typecheck"]
+        }
     }
 }

@@ -5,7 +5,7 @@
     "scripts": {
         "compile": "open-iga compile --entryPoint src/aws-connector.ts",
         "test": "bun test",
-        "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.test.json"
+        "typecheck": "bun --check"
     },
     "dependencies": {
         "aws4fetch": "catalog:",
