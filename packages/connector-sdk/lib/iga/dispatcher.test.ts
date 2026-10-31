@@ -17,13 +17,14 @@ const setHostInput = (value: unknown) => {
 const readHostOutput = () => JSON.parse(hostOutput);
 
 const validInput = {
+    tenant: { id: 'tenant-1' },
     email: 'test.user@openiga.dev',
     firstname: 'test',
     lastname: 'user',
 };
 
 const buildPlugin = (
-    handler: AccountAction<ConnectorConfig, [], 'create'>['handler'] = () => ({ id: 'user-1' }),
+    handler: AccountAction<ConnectorConfig, [], 'create'>['handler'] = () => ({ id: 'user-1', created: true }),
     config: ConnectorConfig = [],
 ) =>
     new OpenIgaConnector({
@@ -76,7 +77,7 @@ describe('createRuntimeDispatcher', () => {
     it('should throw error if the input in handler is invalid', async () => {
         const dispatch = createRuntimeDispatcher(buildPlugin());
         // email is not a valid email address
-        setHostInput({ ...routing, config: {}, input: { email: 'not-an-email', firstname: 'test', lastname: 'user' } });
+        setHostInput({ ...routing, config: {}, input: { tenant: { id: 'tenant-1' }, email: 'not-an-email', firstname: 'test', lastname: 'user' } });
 
         const code = await dispatch();
 
@@ -114,7 +115,7 @@ describe('createRuntimeDispatcher', () => {
                 ({ config, input }) => {
                     expect(config).toEqual({ REGION: 'us-east-1' });
                     expect(input.email).toBe(validInput.email);
-                    return { id: 'user-1', metadata: { region: (config as { REGION: string }).REGION } } as never;
+                    return { id: 'user-1', created: false, metadata: { region: (config as { REGION: string }).REGION } } as never;
                 },
                 [{ name: 'REGION', description: 'region', required: true }],
             ),
@@ -124,6 +125,35 @@ describe('createRuntimeDispatcher', () => {
         const code = await dispatch();
 
         expect(code).toBe(0);
-        expect(readHostOutput()).toEqual({ id: 'user-1', metadata: { region: 'us-east-1' } });
+        expect(readHostOutput()).toEqual({ id: 'user-1', created: false, metadata: { region: 'us-east-1' } });
+    });
+
+    it('should dispatch a paged account list', async () => {
+        const plugin = new OpenIgaConnector({
+            name: 'connector',
+            description: 'desc',
+            config: [],
+            allowedDomains: ['domain.com'],
+        }).registerAccountActions('iam-user', {
+            type: 'list',
+            description: 'list users',
+            endpoints: [{ method: 'GET', url: 'https://domain.com', description: 'endpoint' }],
+            handler: ({ input }) => {
+                expect(input.cursor).toBe('p1');
+                return { accounts: [{ id: 'user-1', email: 'a@b.co', enabled: true }], nextCursor: 'p2' };
+            },
+        });
+        setHostInput({
+            __kind: 'account-action',
+            __managedResource: 'iam-user',
+            __type: 'list',
+            config: {},
+            input: { tenant: { id: 'tenant-1' }, cursor: 'p1' },
+        });
+
+        const code = await createRuntimeDispatcher(plugin)();
+
+        expect(code).toBe(0);
+        expect(readHostOutput().nextCursor).toBe('p2');
     });
 });
