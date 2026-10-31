@@ -36,7 +36,7 @@ jobs:
             - name: Install dependencies
               run: bun install --frozen-lockfile
 
-            - name: Lint, test and compile
+            - name: Typecheck, Lint, test and compile
               run: bunx turbo run typecheck "//#lint" test compile
 
     changeset-check:
