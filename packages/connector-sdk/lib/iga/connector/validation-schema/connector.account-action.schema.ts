@@ -3,7 +3,7 @@ import { connectorConfigSchema } from './connector.config.schema.ts';
 
 // Build-time validation schema for an account action
 export const connectorAccountActionSchema = z.object({
-    type: z.enum(['create', 'disable', 'enable', 'delete', 'read']),
+    type: z.enum(['create', 'disable', 'enable', 'delete', 'read', 'list']),
     description: z.string(),
     endpoints: z.array(
         z.object({
