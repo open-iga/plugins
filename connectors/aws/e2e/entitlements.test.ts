@@ -3,6 +3,8 @@ import { createMockedHost, type MockedHost } from '@open-iga/connector-sdk/test'
 import { awsConnector } from '../src/aws-connector.ts';
 import { createGroup } from '../src/utils/iam.group.ts';
 
+const tenant = { id: '000000000000' };
+
 const endpoint = () => process.env.AWS_ENDPOINT_URL ?? '';
 const credentials = { accessKeyId: 'test', secretAccessKey: 'test' };
 
@@ -36,7 +38,7 @@ describe('entitlements', () => {
     });
 
     it('should discover user groups, excluding operator-filtered ones', async () => {
-        const result = await host.callEntitlements('iam-user-group', 'discover');
+        const result = await host.callEntitlements('iam-user-group', 'discover', { tenant });
         expect(result.ok).toBe(true);
         if (!result.ok) return;
 
@@ -54,6 +56,7 @@ describe('entitlements', () => {
     it('should grant, read, and revoke a group membership for a user', async () => {
         // A user to receive the entitlement.
         const created = await host.callAccountActions('iam-user', 'create', {
+            tenant,
             email: 'grant.target@openiga.dev',
             firstname: 'grant',
             lastname: 'target',
@@ -63,13 +66,14 @@ describe('entitlements', () => {
         const userArn = created.output.id;
 
         // Discover to get a real group ARN to grant.
-        const discovered = await host.callEntitlements('iam-user-group', 'discover');
+        const discovered = await host.callEntitlements('iam-user-group', 'discover', { tenant });
         expect(discovered.ok).toBe(true);
         if (!discovered.ok) return;
         const groupArn = discovered.output.entitlements.find((e) => e.name === 'ReadOnly')!.entitlementId;
 
         // Grant — the user is added to the group.
         const granted = await host.callEntitlements('iam-user-group', 'grant', {
+            tenant,
             id: userArn,
             entitlementId: groupArn,
         });
@@ -77,12 +81,13 @@ describe('entitlements', () => {
         if (granted.ok) expect(granted.output.granted).toBe(true);
 
         // Read (drift detection) — the group ARN is reported back.
-        const readGranted = await host.callEntitlements('iam-user-group', 'read', { id: userArn });
+        const readGranted = await host.callEntitlements('iam-user-group', 'read', { tenant, id: userArn });
         expect(readGranted.ok).toBe(true);
         if (readGranted.ok) expect(readGranted.output.entitlementIds).toContain(groupArn);
 
         // Revoke — the user is removed from the group.
         const revoked = await host.callEntitlements('iam-user-group', 'revoke', {
+            tenant,
             id: userArn,
             entitlementId: groupArn,
         });
@@ -90,7 +95,7 @@ describe('entitlements', () => {
         if (revoked.ok) expect(revoked.output.revoked).toBe(true);
 
         // Read after revoke — no longer reported.
-        const readRevoked = await host.callEntitlements('iam-user-group', 'read', { id: userArn });
+        const readRevoked = await host.callEntitlements('iam-user-group', 'read', { tenant, id: userArn });
         expect(readRevoked.ok).toBe(true);
         if (readRevoked.ok) expect(readRevoked.output.entitlementIds).not.toContain(groupArn);
     });

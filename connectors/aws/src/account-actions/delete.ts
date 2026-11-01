@@ -1,4 +1,5 @@
 import type awsConnector from '../aws-connector.ts';
+import { USER_MANAGEMENT_ROLE } from '../utils/role-config.ts';
 import { assumeRole } from '../utils/sts.ts';
 import { IAM_ENDPOINT, stsEndpoint, IAM_ACTION_ENDPOINTS } from '../utils/aws-endpoints.ts';
 import { resolveRegion } from '../utils/region.ts';
@@ -11,13 +12,7 @@ export const registerAccountActionDelete = (plugin: typeof awsConnector) => {
         type: 'delete',
         description: 'Delete an IAM user',
         endpoints: IAM_ACTION_ENDPOINTS,
-        config: [
-            {
-                name: 'AWS_USER_MANAGEMENT_ROLE',
-                description: 'ARN of the least-privilege role assumed (via STS) to manage IAM users',
-                required: true,
-            },
-        ],
+        config: [USER_MANAGEMENT_ROLE],
         handler: async ({ config, input }) => {
             const region = resolveRegion(config.AWS_REGION);
 

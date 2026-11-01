@@ -1,4 +1,5 @@
 import type awsConnector from '../../aws-connector.ts';
+import { ENTITLEMENT_MANAGEMENT_ROLE } from '../../utils/role-config.ts';
 import { assumeRole } from '../../utils/sts.ts';
 import { IAM_ENDPOINT, stsEndpoint, IAM_ACTION_ENDPOINTS } from '../../utils/aws-endpoints.ts';
 import { listGroupsAssignedToUser } from '../../utils/iam.group.ts';
@@ -10,13 +11,7 @@ export const registerEntitlementRead = (plugin: typeof awsConnector) => {
         type: 'read',
         description: 'Read the IAM user groups a user belongs to (for entitlement drift detection)',
         endpoints: IAM_ACTION_ENDPOINTS,
-        config: [
-            {
-                name: 'AWS_ENTITLEMENT_MANAGEMENT_ROLE',
-                description: 'ARN of the least-privilege role assumed (via STS) to manage user group membership',
-                required: true,
-            },
-        ],
+        config: [ENTITLEMENT_MANAGEMENT_ROLE],
         handler: async ({ config, input }) => {
             const region = resolveRegion(config.AWS_REGION);
 

@@ -26,7 +26,8 @@
         "./tsconfig.connector.json": "./tsconfig.connector.json"
     },
     "scripts": {
-        "test": "bun test"
+        "test": "bun test",
+        "typecheck": "bun --check"
     },
     "dependencies": {
         "@extism/extism": "catalog:",

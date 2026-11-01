@@ -1,12 +1,15 @@
 import * as z from 'zod/mini';
+import { tenantSchema } from './connector.tenant.schema.ts';
 
 const metadataSchema = z.optional(z.record(z.string(), z.json()));
 
 // Discovery returns the catalog of entitlements the host indexes for search / self-request.
-// An entitlement is generic: a stable id, a human name, an optional description.
+// An entitlement is generic: a stable id, a human name, an optional description. The catalog is
+// paged: keep calling with `nextCursor` until it is missing.
 const discoverHandlerSchema = {
-    input: z.object({}),
+    input: z.object({ tenant: tenantSchema, cursor: z.optional(z.string()) }),
     output: z.object({
+        nextCursor: z.optional(z.string()),
         entitlements: z.array(
             z.object({
                 entitlementId: z.string(),
@@ -20,6 +23,7 @@ const discoverHandlerSchema = {
 
 const grantHandlerSchema = {
     input: z.object({
+        tenant: tenantSchema,
         //  id returned by the account creation handler
         id: z.string(),
         // id returned by the entitlement discovery handler
@@ -32,6 +36,7 @@ const grantHandlerSchema = {
 
 const revokeHandlerSchema = {
     input: z.object({
+        tenant: tenantSchema,
         //  id returned by the account creation handler
         id: z.string(),
         // id returned by the entitlement discovery handler
@@ -46,6 +51,7 @@ const revokeHandlerSchema = {
 // account currently holds, so the host can reconcile them against its recorded grants.
 const readHandlerSchema = {
     input: z.object({
+        tenant: tenantSchema,
         // id returned by the account creation handler
         id: z.string(),
     }),

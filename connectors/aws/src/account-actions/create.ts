@@ -1,10 +1,12 @@
 import { sendEmail } from '@open-iga/connector-sdk';
 import type awsConnector from '../aws-connector.ts';
+import { USER_MANAGEMENT_ROLE } from '../utils/role-config.ts';
 import { assumeRole } from '../utils/sts.ts';
 import { IAM_ENDPOINT, stsEndpoint, IAM_ACTION_ENDPOINTS } from '../utils/aws-endpoints.ts';
 import { resolveRegion } from '../utils/region.ts';
-import { createUser } from '../utils/iam.create-user.ts';
-import { createLoginProfile } from '../utils/iam.login-profile.ts';
+import { createUser, EMAIL_TAG } from '../utils/iam.create-user.ts';
+import { getUser } from '../utils/iam.get-user.ts';
+import { createLoginProfile, hasLoginProfile } from '../utils/iam.login-profile.ts';
 import { generateTemporaryPassword } from '../utils/password.ts';
 import { userNameFromEmail } from '../utils/username.ts';
 
@@ -17,11 +19,7 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
         description: 'IAM User account creation',
         endpoints: IAM_ACTION_ENDPOINTS,
         config: [
-            {
-                name: 'AWS_USER_MANAGEMENT_ROLE',
-                description: 'ARN of the least-privilege role assumed (via STS) to manage IAM users',
-                required: true,
-            },
+            USER_MANAGEMENT_ROLE,
             {
                 name: 'AWS_PASSWORD_PATTERN',
                 description:
@@ -43,11 +41,32 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
                 roleSessionName: 'openiga-aws-iam-user-create',
             });
 
-            const created = await createUser({
-                endpoint: IAM_ENDPOINT,
-                credentials: assumed,
-                userName: userNameFromEmail(input.email),
-            });
+            const userName = userNameFromEmail(input.email);
+            let created;
+            try {
+                created = await createUser({
+                    endpoint: IAM_ENDPOINT,
+                    credentials: assumed,
+                    userName,
+                    email: input.email,
+                });
+            } catch (error) {
+                if (!String(error).includes('EntityAlreadyExists')) throw error;
+
+                // Reuse the existing user only if its Email tag matches; the username is just the email's first part.
+                const existing = await getUser({ endpoint: IAM_ENDPOINT, credentials: assumed, userName });
+                if (existing.tags[EMAIL_TAG]?.toLowerCase() !== input.email.trim().toLowerCase()) {
+                    throw new Error(
+                        `IAM user "${userName}" already exists and is not tagged ${EMAIL_TAG}=${input.email}`,
+                    );
+                }
+
+                // No login profile means disabled or half-created, so report failure instead of success
+                if (!(await hasLoginProfile({ endpoint: IAM_ENDPOINT, credentials: assumed, userName }))) {
+                    throw new Error(`IAM user "${userName}" exists without console access; enable or delete it first`);
+                }
+                return { id: existing.arn, created: false };
+            }
 
             // To grant the console access to user with a one-time password that must be changed after the first login
             const temporaryPassword = generateTemporaryPassword(config.AWS_PASSWORD_PATTERN);
@@ -77,6 +96,7 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
 
             return {
                 id: created.arn,
+                created: true,
             };
         },
     });

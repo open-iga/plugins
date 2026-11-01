@@ -18,7 +18,8 @@ export const buildConfig = (
             throw new Error(`Config "${name}" is required but missing from the Host config`);
         }
 
-        config[name] = value;
+        config[name] = value ?? null;
     }
+
     return config;
 };

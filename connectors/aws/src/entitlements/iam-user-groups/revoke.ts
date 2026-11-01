@@ -1,4 +1,5 @@
 import type awsConnector from '../../aws-connector.ts';
+import { ENTITLEMENT_MANAGEMENT_ROLE } from '../../utils/role-config.ts';
 import { assumeRole } from '../../utils/sts.ts';
 import { IAM_ENDPOINT, stsEndpoint, IAM_ACTION_ENDPOINTS } from '../../utils/aws-endpoints.ts';
 import { removeUserFromGroup } from '../../utils/iam.group.ts';
@@ -8,15 +9,9 @@ import { resolveRegion } from '../../utils/region.ts';
 export const registerEntitlementRevoke = (plugin: typeof awsConnector) => {
     plugin.registerEntitlements('iam-user-group', {
         type: 'revoke',
-        description: 'Revoke a user\'s membership in an IAM user group',
+        description: "Revoke a user's membership in an IAM user group",
         endpoints: IAM_ACTION_ENDPOINTS,
-        config: [
-            {
-                name: 'AWS_ENTITLEMENT_MANAGEMENT_ROLE',
-                description: 'ARN of the least-privilege role assumed (via STS) to manage user group membership',
-                required: true,
-            },
-        ],
+        config: [ENTITLEMENT_MANAGEMENT_ROLE],
         handler: async ({ config, input }) => {
             const region = resolveRegion(config.AWS_REGION);
 

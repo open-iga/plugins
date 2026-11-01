@@ -16,13 +16,13 @@ export const awsConnector = new OpenIgaConnector({
         { name: 'AWS_REGION', description: 'AWS region', required: true },
         {
             name: 'AWS_ACCESS_KEY_ID',
-            description: 'Base access key id used by the host. Handler level roles are assumed with this access key.',
+            description:
+                'Access key id of the IAM user that assumes the three handler roles. The user needs no IAM permissions of its own; each role trusts the user by ARN.',
             required: true,
         },
         {
             name: 'AWS_SECRET_ACCESS_KEY',
-            description:
-                'Base secret access key used to call STS. Handler level roles are assumed with this access key.',
+            description: 'Secret access key for AWS_ACCESS_KEY_ID.',
             required: true,
         },
     ],
