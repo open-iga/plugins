@@ -1,5 +1,11 @@
 # @open-iga/aws
 
+## 0.3.0
+
+### Minor Changes
+
+- a6b5a4a: Support list accounts with cursor, pass tenant info from core and support cursor for entitlement discovery
+
 ## 0.2.0
 
 ### Minor Changes
