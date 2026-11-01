@@ -6,7 +6,7 @@ import { IAM_ENDPOINT, stsEndpoint, IAM_ACTION_ENDPOINTS } from '../utils/aws-en
 import { resolveRegion } from '../utils/region.ts';
 import { createUser, EMAIL_TAG } from '../utils/iam.create-user.ts';
 import { getUser } from '../utils/iam.get-user.ts';
-import { createLoginProfile } from '../utils/iam.login-profile.ts';
+import { createLoginProfile, hasLoginProfile } from '../utils/iam.login-profile.ts';
 import { generateTemporaryPassword } from '../utils/password.ts';
 import { userNameFromEmail } from '../utils/username.ts';
 
@@ -59,6 +59,11 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
                     throw new Error(
                         `IAM user "${userName}" already exists and is not tagged ${EMAIL_TAG}=${input.email}`,
                     );
+                }
+
+                // No login profile means disabled or half-created, so report failure instead of success
+                if (!(await hasLoginProfile({ endpoint: IAM_ENDPOINT, credentials: assumed, userName }))) {
+                    throw new Error(`IAM user "${userName}" exists without console access; enable or delete it first`);
                 }
                 return { id: existing.arn, created: false };
             }

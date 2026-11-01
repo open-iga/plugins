@@ -17,7 +17,7 @@ export const awsConnector = new OpenIgaConnector({
         {
             name: 'AWS_ACCESS_KEY_ID',
             description:
-                'Access key id of the IAM principal that assumes the handler roles. It needs only sts:AssumeRole on the three role ARNs (AWS_USER_MANAGEMENT_ROLE, AWS_GROUP_DISCOVERY_ROLE, AWS_ENTITLEMENT_MANAGEMENT_ROLE).',
+                'Access key id of the IAM user that assumes the three handler roles. The user needs no IAM permissions of its own; each role trusts the user by ARN.',
             required: true,
         },
         {

@@ -81,6 +81,31 @@ describe('account-actions.create', () => {
         expect(host.hostFunctions.sentEmails.length).toBe(emailsBefore);
     });
 
+    it('should fail instead of reporting success when the existing user has no console access', async () => {
+        const email = 'no.access@openiga.dev';
+        const created = await host.callAccountActions('iam-user', 'create', {
+            tenant,
+            email,
+            firstname: 'no',
+            lastname: 'access',
+        });
+        expect(created.ok).toBe(true);
+        if (!created.ok) return;
+        await host.callAccountActions('iam-user', 'disable', { tenant, id: created.output.id });
+
+        const again = await host.callAccountActions('iam-user', 'create', {
+            tenant,
+            email,
+            firstname: 'no',
+            lastname: 'access',
+        });
+
+        expect(again.ok).toBe(false);
+        if (!again.ok) {
+            expect(again.error).toContain('without console access');
+        }
+    });
+
     it('should not adopt an existing user that belongs to a different email', async () => {
         const first = await host.callAccountActions('iam-user', 'create', {
             tenant,
