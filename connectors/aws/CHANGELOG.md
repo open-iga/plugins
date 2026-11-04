@@ -1,5 +1,11 @@
 # @open-iga/aws
 
+## 0.3.1
+
+### Patch Changes
+
+- 63552d7: Adjust account id in handler schema
+
 ## 0.3.0
 
 ### Minor Changes
