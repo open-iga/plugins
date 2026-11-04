@@ -18,7 +18,7 @@ const creationHandlerSchema = {
         metadata: metadataSchema,
     }),
     output: z.object({
-        id: z.string(),
+        accountId: z.string(),
         // false when an existing account was returned
         created: z.boolean(),
         metadata: metadataSchema,
@@ -28,7 +28,7 @@ const creationHandlerSchema = {
 const enableHandlerSchema = {
     input: z.object({
         tenant: tenantSchema,
-        id: z.string(),
+        accountId: z.string(),
     }),
     output: z.object({
         enabled: z.boolean(),
@@ -38,7 +38,7 @@ const enableHandlerSchema = {
 const disableHandlerSchema = {
     input: z.object({
         tenant: tenantSchema,
-        id: z.string(),
+        accountId: z.string(),
     }),
     output: z.object({
         disabled: z.boolean(),
@@ -48,7 +48,7 @@ const disableHandlerSchema = {
 const deleteHandlerSchema = {
     input: z.object({
         tenant: tenantSchema,
-        id: z.string(),
+        accountId: z.string(),
     }),
     output: z.object({
         deleted: z.boolean(),
@@ -58,7 +58,7 @@ const deleteHandlerSchema = {
 const readHandlerSchema = {
     input: z.object({
         tenant: tenantSchema,
-        id: z.string(),
+        accountId: z.string(),
     }),
     // Read is an account-drift primitive: it reports whether the account still exists and
     // whether it is enabled, rather than echoing profile attributes.
@@ -77,7 +77,7 @@ const listHandlerSchema = {
     output: z.object({
         accounts: z.array(
             z.object({
-                id: z.string(),
+                accountId: z.string(),
                 email: z.string(),
                 enabled: z.boolean(),
                 firstname: z.optional(z.string()),

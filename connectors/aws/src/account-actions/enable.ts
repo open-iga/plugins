@@ -28,7 +28,7 @@ export const registerAccountActionEnable = (plugin: typeof awsConnector) => {
                 roleSessionName: 'openiga-aws-iam-user-enable',
             });
 
-            const userName = userNameFromArn(input.id);
+            const userName = userNameFromArn(input.accountId);
 
             // Restore console access with a fresh one-time password the user must change at login.
             const temporaryPassword = generateTemporaryPassword();
@@ -39,7 +39,7 @@ export const registerAccountActionEnable = (plugin: typeof awsConnector) => {
                 password: temporaryPassword,
             });
 
-            const loginUrl = `https://${accountIdFromArn(input.id)}.signin.aws.amazon.com/console`;
+            const loginUrl = `https://${accountIdFromArn(input.accountId)}.signin.aws.amazon.com/console`;
             sendEmail({
                 subject: 'Your AWS access has been re-enabled',
                 body: [

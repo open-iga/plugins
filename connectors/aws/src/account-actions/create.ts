@@ -65,7 +65,7 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
                 if (!(await hasLoginProfile({ endpoint: IAM_ENDPOINT, credentials: assumed, userName }))) {
                     throw new Error(`IAM user "${userName}" exists without console access; enable or delete it first`);
                 }
-                return { id: existing.arn, created: false };
+                return { accountId: existing.arn, created: false };
             }
 
             // To grant the console access to user with a one-time password that must be changed after the first login
@@ -95,7 +95,7 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
             });
 
             return {
-                id: created.arn,
+                accountId: created.arn,
                 created: true,
             };
         },

@@ -35,8 +35,8 @@ describe('account-actions.create', () => {
 
         expect(result.ok).toBe(true);
         if (result.ok) {
-            expect(typeof result.output.id).toBe('string');
-            expect(result.output.id.length).toBeGreaterThan(0);
+            expect(typeof result.output.accountId).toBe('string');
+            expect(result.output.accountId.length).toBeGreaterThan(0);
         }
 
         // The connector must deliver credentials via the Host email capability.
@@ -75,7 +75,7 @@ describe('account-actions.create', () => {
 
         expect(second.ok).toBe(true);
         if (second.ok) {
-            expect(second.output).toEqual({ id: first.output.id, created: false });
+            expect(second.output).toEqual({ accountId: first.output.accountId, created: false });
         }
         // No new password is sent for an existing user
         expect(host.hostFunctions.sentEmails.length).toBe(emailsBefore);
@@ -91,7 +91,7 @@ describe('account-actions.create', () => {
         });
         expect(created.ok).toBe(true);
         if (!created.ok) return;
-        await host.callAccountActions('iam-user', 'disable', { tenant, id: created.output.id });
+        await host.callAccountActions('iam-user', 'disable', { tenant, accountId: created.output.accountId });
 
         const again = await host.callAccountActions('iam-user', 'create', {
             tenant,

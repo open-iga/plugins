@@ -27,7 +27,7 @@ export const registerAccountActionRead = (plugin: typeof awsConnector) => {
                 roleSessionName: 'openiga-aws-iam-user-read',
             });
 
-            const userName = userNameFromArn(input.id);
+            const userName = userNameFromArn(input.accountId);
 
             const exists = await userExists({ endpoint: IAM_ENDPOINT, credentials: assumed, userName });
             if (!exists) {

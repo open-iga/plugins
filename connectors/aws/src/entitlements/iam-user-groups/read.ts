@@ -29,7 +29,7 @@ export const registerEntitlementRead = (plugin: typeof awsConnector) => {
             const groups = await listGroupsAssignedToUser({
                 endpoint: IAM_ENDPOINT,
                 credentials: assumed,
-                userName: userNameFromArn(input.id),
+                userName: userNameFromArn(input.accountId),
             });
 
             return { entitlementIds: groups.map((group) => group.arn) };

@@ -24,7 +24,7 @@ const validInput = {
 };
 
 const buildPlugin = (
-    handler: AccountAction<ConnectorConfig, [], 'create'>['handler'] = () => ({ id: 'user-1', created: true }),
+    handler: AccountAction<ConnectorConfig, [], 'create'>['handler'] = () => ({ accountId: 'user-1', created: true }),
     config: ConnectorConfig = [],
 ) =>
     new OpenIgaConnector({
@@ -87,7 +87,7 @@ describe('createRuntimeDispatcher', () => {
 
     it('should throw error if the required config from the connector is missing', async () => {
         const dispatch = createRuntimeDispatcher(
-            buildPlugin(() => ({ id: 'user-1' }) as never, [{ name: 'REGION', description: 'region', required: true }]),
+            buildPlugin(() => ({ accountId: 'user-1' }) as never, [{ name: 'REGION', description: 'region', required: true }]),
         );
         setHostInput({ ...routing, config: {}, input: validInput });
         // REGION intentionally left out of the envelope config
@@ -115,7 +115,7 @@ describe('createRuntimeDispatcher', () => {
                 ({ config, input }) => {
                     expect(config).toEqual({ REGION: 'us-east-1' });
                     expect(input.email).toBe(validInput.email);
-                    return { id: 'user-1', created: false, metadata: { region: (config as { REGION: string }).REGION } } as never;
+                    return { accountId: 'user-1', created: false, metadata: { region: (config as { REGION: string }).REGION } } as never;
                 },
                 [{ name: 'REGION', description: 'region', required: true }],
             ),
@@ -125,7 +125,7 @@ describe('createRuntimeDispatcher', () => {
         const code = await dispatch();
 
         expect(code).toBe(0);
-        expect(readHostOutput()).toEqual({ id: 'user-1', created: false, metadata: { region: 'us-east-1' } });
+        expect(readHostOutput()).toEqual({ accountId: 'user-1', created: false, metadata: { region: 'us-east-1' } });
     });
 
     it('should dispatch a paged account list', async () => {
@@ -140,7 +140,7 @@ describe('createRuntimeDispatcher', () => {
             endpoints: [{ method: 'GET', url: 'https://domain.com', description: 'endpoint' }],
             handler: ({ input }) => {
                 expect(input.cursor).toBe('p1');
-                return { accounts: [{ id: 'user-1', email: 'a@b.co', enabled: true }], nextCursor: 'p2' };
+                return { accounts: [{ accountId: 'user-1', email: 'a@b.co', enabled: true }], nextCursor: 'p2' };
             },
         });
         setHostInput({

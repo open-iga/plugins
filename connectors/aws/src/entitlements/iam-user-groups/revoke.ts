@@ -30,7 +30,7 @@ export const registerEntitlementRevoke = (plugin: typeof awsConnector) => {
                 await removeUserFromGroup({
                     endpoint: IAM_ENDPOINT,
                     credentials: assumed,
-                    userName: userNameFromArn(input.id),
+                    userName: userNameFromArn(input.accountId),
                     groupName: nameFromArn(input.entitlementId),
                 });
             } catch (error) {

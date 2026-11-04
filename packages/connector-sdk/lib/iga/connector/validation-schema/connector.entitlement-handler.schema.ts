@@ -24,8 +24,8 @@ const discoverHandlerSchema = {
 const grantHandlerSchema = {
     input: z.object({
         tenant: tenantSchema,
-        //  id returned by the account creation handler
-        id: z.string(),
+        // accountId returned by the account creation handler
+        accountId: z.string(),
         // id returned by the entitlement discovery handler
         entitlementId: z.string(),
     }),
@@ -37,8 +37,8 @@ const grantHandlerSchema = {
 const revokeHandlerSchema = {
     input: z.object({
         tenant: tenantSchema,
-        //  id returned by the account creation handler
-        id: z.string(),
+        // accountId returned by the account creation handler
+        accountId: z.string(),
         // id returned by the entitlement discovery handler
         entitlementId: z.string(),
     }),
@@ -47,13 +47,13 @@ const revokeHandlerSchema = {
     }),
 };
 
-// Drift detection: given the account id from account creation, return the entitlement ids the
+// Drift detection: given the accountId from account creation, return the entitlement ids the
 // account currently holds, so the host can reconcile them against its recorded grants.
 const readHandlerSchema = {
     input: z.object({
         tenant: tenantSchema,
-        // id returned by the account creation handler
-        id: z.string(),
+        // accountId returned by the account creation handler
+        accountId: z.string(),
     }),
     output: z.object({
         entitlementIds: z.array(z.string()),
