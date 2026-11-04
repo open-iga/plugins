@@ -26,7 +26,7 @@ export const registerAccountActionDisable = (plugin: typeof awsConnector) => {
                 roleSessionName: 'openiga-aws-iam-user-disable',
             });
 
-            const userName = userNameFromArn(input.id);
+            const userName = userNameFromArn(input.accountId);
 
             try {
                 await deleteLoginProfile({ endpoint: IAM_ENDPOINT, credentials: assumed, userName });

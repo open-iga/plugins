@@ -29,7 +29,7 @@ export const registerEntitlementGrant = (plugin: typeof awsConnector) => {
             await addUserToGroup({
                 endpoint: IAM_ENDPOINT,
                 credentials: assumed,
-                userName: userNameFromArn(input.id),
+                userName: userNameFromArn(input.accountId),
                 groupName: nameFromArn(input.entitlementId),
             });
 

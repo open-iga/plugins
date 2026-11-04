@@ -63,7 +63,7 @@ describe('entitlements', () => {
         });
         expect(created.ok).toBe(true);
         if (!created.ok) return;
-        const userArn = created.output.id;
+        const userArn = created.output.accountId;
 
         // Discover to get a real group ARN to grant.
         const discovered = await host.callEntitlements('iam-user-group', 'discover', { tenant });
@@ -74,28 +74,28 @@ describe('entitlements', () => {
         // Grant — the user is added to the group.
         const granted = await host.callEntitlements('iam-user-group', 'grant', {
             tenant,
-            id: userArn,
+            accountId: userArn,
             entitlementId: groupArn,
         });
         expect(granted.ok).toBe(true);
         if (granted.ok) expect(granted.output.granted).toBe(true);
 
         // Read (drift detection) — the group ARN is reported back.
-        const readGranted = await host.callEntitlements('iam-user-group', 'read', { tenant, id: userArn });
+        const readGranted = await host.callEntitlements('iam-user-group', 'read', { tenant, accountId: userArn });
         expect(readGranted.ok).toBe(true);
         if (readGranted.ok) expect(readGranted.output.entitlementIds).toContain(groupArn);
 
         // Revoke — the user is removed from the group.
         const revoked = await host.callEntitlements('iam-user-group', 'revoke', {
             tenant,
-            id: userArn,
+            accountId: userArn,
             entitlementId: groupArn,
         });
         expect(revoked.ok).toBe(true);
         if (revoked.ok) expect(revoked.output.revoked).toBe(true);
 
         // Read after revoke — no longer reported.
-        const readRevoked = await host.callEntitlements('iam-user-group', 'read', { tenant, id: userArn });
+        const readRevoked = await host.callEntitlements('iam-user-group', 'read', { tenant, accountId: userArn });
         expect(readRevoked.ok).toBe(true);
         if (readRevoked.ok) expect(readRevoked.output.entitlementIds).not.toContain(groupArn);
     });

@@ -52,40 +52,40 @@ describe('account-actions.lifecycle', () => {
         });
         expect(created.ok).toBe(true);
         if (!created.ok) return;
-        const id = created.output.id;
+        const { accountId } = created.output;
         expect(await hasLoginProfile(userName)).toBe(true);
 
         // Read — exists and enabled.
-        const afterCreate = await host.callAccountActions('iam-user', 'read', { tenant, id });
+        const afterCreate = await host.callAccountActions('iam-user', 'read', { tenant, accountId });
         expect(afterCreate.ok).toBe(true);
         if (afterCreate.ok) expect(afterCreate.output).toEqual({ exists: true, enabled: true });
 
         // Disable — console access revoked.
-        const disabled = await host.callAccountActions('iam-user', 'disable', { tenant, id });
+        const disabled = await host.callAccountActions('iam-user', 'disable', { tenant, accountId });
         expect(disabled.ok).toBe(true);
         if (disabled.ok) expect(disabled.output.disabled).toBe(true);
         expect(await hasLoginProfile(userName)).toBe(false);
 
         // Read — still exists, now disabled.
-        const afterDisable = await host.callAccountActions('iam-user', 'read', { tenant, id });
+        const afterDisable = await host.callAccountActions('iam-user', 'read', { tenant, accountId });
         expect(afterDisable.ok).toBe(true);
         if (afterDisable.ok) expect(afterDisable.output).toEqual({ exists: true, enabled: false });
 
         // Enable — console access restored and credentials re-sent via the email capability.
-        const enabled = await host.callAccountActions('iam-user', 'enable', { tenant, id });
+        const enabled = await host.callAccountActions('iam-user', 'enable', { tenant, accountId });
         expect(enabled.ok).toBe(true);
         if (enabled.ok) expect(enabled.output.enabled).toBe(true);
         expect(await hasLoginProfile(userName)).toBe(true);
         expect(host.hostFunctions.sentEmails.at(-1)?.subject).toBe('Your AWS access has been re-enabled');
 
         // Delete — user removed entirely.
-        const deleted = await host.callAccountActions('iam-user', 'delete', { tenant, id });
+        const deleted = await host.callAccountActions('iam-user', 'delete', { tenant, accountId });
         expect(deleted.ok).toBe(true);
         if (deleted.ok) expect(deleted.output.deleted).toBe(true);
         expect(await hasLoginProfile(userName)).toBe(false);
 
         // Read — no longer exists.
-        const afterDelete = await host.callAccountActions('iam-user', 'read', { tenant, id });
+        const afterDelete = await host.callAccountActions('iam-user', 'read', { tenant, accountId });
         expect(afterDelete.ok).toBe(true);
         if (afterDelete.ok) expect(afterDelete.output).toEqual({ exists: false, enabled: false });
     });

@@ -27,7 +27,7 @@ export const registerAccountActionDelete = (plugin: typeof awsConnector) => {
                 roleSessionName: 'openiga-aws-iam-user-delete',
             });
 
-            const userName = userNameFromArn(input.id);
+            const userName = userNameFromArn(input.accountId);
 
             // DeleteUser fails if a login profile still exists — remove it first (best-effort).
             try {
