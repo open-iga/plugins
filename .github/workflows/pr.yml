@@ -7,6 +7,10 @@ on:
 permissions:
     contents: read
 
+concurrency:
+    group: pr-${{ github.event.pull_request.number }}
+    cancel-in-progress: true
+
 jobs:
     ci:
         runs-on: ubuntu-latest
@@ -40,6 +44,7 @@ jobs:
               run: bunx turbo run typecheck "//#lint" test compile
 
     changeset-check:
+        needs: ci
         runs-on: ubuntu-latest
         # Version PRs (changeset-release/*) and dependency bots don't carry changesets
         if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
