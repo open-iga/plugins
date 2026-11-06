@@ -20,6 +20,7 @@ const staticTypeFile = `
     declare module 'extism:host' {
         interface user {
             sendEmail(offset: I64): I64
+            fetch(offset: I64): I64
         }
     }
 `;

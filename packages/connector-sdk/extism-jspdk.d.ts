@@ -9,5 +9,7 @@ declare module 'extism:host' {
     interface user {
         // offset of a JSON EmailPayload in wasm memory -> 0 ok / non-zero failure
         sendEmail(offset: I64): I64;
+        // offset of a JSON {url, method, headers, body} in wasm memory -> offset of a JSON {status, body, error?} (0 on failure)
+        fetch(offset: I64): I64;
     }
 }
