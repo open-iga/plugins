@@ -72,14 +72,33 @@ export const createMockedHost = async <const Config extends ConnectorConfig>({
 
     const wasmPlugin = await createPlugin(wasmPath, {
         useWasi: true,
-        allowedHosts: plugin.settings.allowedDomains,
         logLevel: logLevel ?? 'info',
         // Config is delivered per invocation in the dispatch envelope, not as ambient Extism config.
-        fetch: proxy.fetch as typeof fetch,
         functions: {
             // Namespace must match the guest import (extism:host/user).
             'extism:host/user': {
                 // Guest passes the payload by memory offset; read it, record it, report success (0).
+                // Mirrors the core Host `fetch`: JSON {url, method, headers, body} in, JSON {status, body, error?} out.
+                // A denied or failed request comes back as `error` rather than throwing into the guest.
+                fetch: async (callContext, offset: bigint) => {
+                    const request = callContext.read(offset)?.json() as
+                        | { url: string; method?: string; headers?: Record<string, string>; body?: string }
+                        | undefined;
+                    if (!request) return 0n;
+                    try {
+                        const { url, method, headers, body } = request;
+                        const response = await proxy.fetch(url, {
+                            ...(method && { method }),
+                            ...(headers && { headers }),
+                            ...(body && { body }),
+                        });
+                        return callContext.store(JSON.stringify({ status: response.status, body: await response.text() }));
+                    } catch (err) {
+                        return callContext.store(
+                            JSON.stringify({ status: 403, body: '', error: err instanceof Error ? err.message : String(err) }),
+                        );
+                    }
+                },
                 sendEmail: (callContext, offset: bigint) => {
                     const payload = callContext.read(offset)?.json() as EmailPayload | undefined;
                     if (payload) sentEmails.push(payload);
