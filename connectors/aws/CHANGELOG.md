@@ -1,5 +1,11 @@
 # @open-iga/aws
 
+## 0.4.0
+
+### Minor Changes
+
+- 63b07ee: Adjust fetch polyfill to use host fetch instead of default fetch from Extism
+
 ## 0.3.1
 
 ### Patch Changes
