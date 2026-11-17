@@ -76,7 +76,7 @@ describe('account-actions.lifecycle', () => {
         expect(enabled.ok).toBe(true);
         if (enabled.ok) expect(enabled.output.enabled).toBe(true);
         expect(await hasLoginProfile(userName)).toBe(true);
-        expect(host.hostFunctions.sentEmails.at(-1)?.subject).toBe('Your AWS access has been re-enabled');
+        expect(host.hostFunctions.sentEmails.at(-1)?.reason).toBe('reenabled');
 
         // Delete — user removed entirely.
         const deleted = await host.callAccountActions('iam-user', 'delete', { tenant, accountId });

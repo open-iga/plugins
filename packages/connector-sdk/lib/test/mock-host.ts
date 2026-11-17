@@ -14,7 +14,7 @@ import type { handlerInputOutputSchema } from '../iga/connector/validation-schem
 import type { entitlementHandlerInputOutputSchema } from '../iga/connector/validation-schema/connector.entitlement-handler.schema.ts';
 import type { LogLevel } from '@extism/extism';
 import { createFetchProxy } from './mock-fetch.ts';
-import type { EmailPayload } from '../iga/capabilities/email.schema.ts';
+import { emailPayloadSchema, type EmailPayload } from '../iga/capabilities/email.schema.ts';
 
 export type MockedHostResult<Type extends ConnectorAccountAction['type']> =
     | { ok: true; output: z.infer<(typeof handlerInputOutputSchema)[Type]['output']> }
@@ -100,8 +100,11 @@ export const createMockedHost = async <const Config extends ConnectorConfig>({
                     }
                 },
                 sendEmail: (callContext, offset: bigint) => {
-                    const payload = callContext.read(offset)?.json() as EmailPayload | undefined;
-                    if (payload) sentEmails.push(payload);
+                    const raw = callContext.read(offset)?.json();
+                    // Mirror the real Host: reject anything that isn't a valid structured payload
+                    const parsed = emailPayloadSchema.safeParse(raw);
+                    if (!parsed.success) return 1n;
+                    sentEmails.push(parsed.data);
                     return 0n;
                 },
             },

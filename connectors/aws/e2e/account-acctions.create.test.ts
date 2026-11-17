@@ -42,9 +42,10 @@ describe('account-actions.create', () => {
         // The connector must deliver credentials via the Host email capability.
         expect(host.hostFunctions.sentEmails.length).toBeGreaterThan(0);
         const sent = host.hostFunctions.sentEmails.at(-1)!;
-        expect(sent.subject).toBe('Your AWS access');
-        expect(sent.body).toContain('AWS Login URL:');
-        expect(sent.body).toContain('Password:');
+        expect(sent.reason).toBe('onboarded');
+        expect(sent.loginUrl).toMatch(/^https:\/\/\d+\.signin\.aws\.amazon\.com\/console$/);
+        expect(sent.password.length).toBeGreaterThan(0);
+        expect(sent.passwordChangeRequired).toBe(true);
 
         // Prove console access was actually provisioned: the login profile exists in the
         // emulator with the forced-reset flag. The console password itself is write-only and
