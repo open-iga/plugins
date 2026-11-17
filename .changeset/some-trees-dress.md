@@ -1,5 +1,4 @@
 ---
-'@open-iga/connector-sdk': minor
 '@open-iga/aws': minor
 ---
 
