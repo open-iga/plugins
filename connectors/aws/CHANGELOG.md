@@ -1,5 +1,11 @@
 # @open-iga/aws
 
+## 0.5.0
+
+### Minor Changes
+
+- 2d3eccc: sendEmail now takes a structured credentials payload (system, loginUrl, username, password, passwordChangeRequired) instead of free-form subject/body. The Host renders the wording from a fixed template and validates the same schema, so connectors can't use it for phishing.
+
 ## 0.4.0
 
 ### Minor Changes
