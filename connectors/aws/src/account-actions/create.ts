@@ -77,21 +77,18 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
                 password: temporaryPassword,
             });
 
-            // TODO: there is a possibility the plugin could do a phishing attack; check for alternative options
             // Deliver credentials via the Host email capability so the password only travels
             // through that side channel — never through this action's return value. The Host
-            // injects the recipient from the invocation input; the connector supplies content only.
+            // injects the recipient from the invocation input; the connector supplies data only and the Host renders the wording.
             const loginUrl = `https://${accountIdFromArn(created.arn)}.signin.aws.amazon.com/console`;
             sendEmail({
-                subject: 'Your AWS access',
-                body: [
-                    `Hi ${input.firstname} ${input.lastname},`,
-                    '',
-                    'Here is your AWS access. You will be asked to set a new password at first sign-in.',
-                    `AWS Login URL: ${loginUrl}`,
-                    `Username: ${created.userName}`,
-                    `Password: ${temporaryPassword}`,
-                ].join('\n'),
+                template: 'credentials',
+                reason: 'onboarded',
+                system: 'AWS',
+                loginUrl,
+                username: created.userName,
+                password: temporaryPassword,
+                passwordChangeRequired: true,
             });
 
             return {

@@ -41,15 +41,13 @@ export const registerAccountActionEnable = (plugin: typeof awsConnector) => {
 
             const loginUrl = `https://${accountIdFromArn(input.accountId)}.signin.aws.amazon.com/console`;
             sendEmail({
-                subject: 'Your AWS access has been re-enabled',
-                body: [
-                    'Hi,',
-                    '',
-                    'Your AWS access has been re-enabled. You will be asked to set a new password at first sign-in.',
-                    `AWS Login URL: ${loginUrl}`,
-                    `Username: ${userName}`,
-                    `Password: ${temporaryPassword}`,
-                ].join('\n'),
+                template: 'credentials',
+                reason: 'reenabled',
+                system: 'AWS',
+                loginUrl,
+                username: userName,
+                password: temporaryPassword,
+                passwordChangeRequired: true,
             });
 
             return { enabled: true };
