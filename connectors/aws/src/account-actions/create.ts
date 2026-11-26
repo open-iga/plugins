@@ -47,7 +47,7 @@ const getReusableUserArn = async ({ iamClient, userName, email }: CreateUserArgs
     const { User } = await iamClient.send(new GetUserCommand({ UserName: userName }));
     const taggedEmail = User?.Tags?.find((tag) => tag.Key === EMAIL_TAG)?.Value;
 
-    if (!User?.Arn || taggedEmail?.toLowerCase() !== email.trim().toLowerCase()) {
+    if (!User?.Arn || taggedEmail?.trim().toLowerCase() !== email.trim().toLowerCase()) {
         throw new Error(`IAM user "${userName}" already exists and is not tagged ${EMAIL_TAG}=${email}`);
     }
 
