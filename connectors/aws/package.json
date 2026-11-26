@@ -1,6 +1,6 @@
 {
     "name": "@open-iga/aws",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "type": "module",
     "scripts": {
         "compile": "open-iga compile --entryPoint src/aws-connector.ts --plugin src/xml-parser.plugin.ts",

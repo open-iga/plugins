@@ -1,5 +1,11 @@
 # @open-iga/aws
 
+## 0.6.0
+
+### Minor Changes
+
+- 529007d: Call AWS through the official SDK clients
+
 ## 0.5.0
 
 ### Minor Changes
