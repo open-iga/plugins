@@ -1,10 +1,8 @@
 import type awsConnector from '../aws-connector.ts';
 import { USER_MANAGEMENT_ROLE } from '../utils/role-config.ts';
-import { assumeRole } from '../utils/sts.ts';
-import { IAM_ENDPOINT, stsEndpoint, IAM_ACTION_ENDPOINTS } from '../utils/aws-endpoints.ts';
-import { resolveRegion } from '../utils/region.ts';
-import { userExists } from '../utils/iam.user-exists.ts';
-import { hasLoginProfile } from '../utils/iam.login-profile.ts';
+import { buildIamClient } from '../utils/client.ts';
+import { IAM_ACTION_ENDPOINTS } from '../utils/aws-endpoints.ts';
+import { checkLoginProfileExists, checkUserExists } from '../utils/iam.ts';
 import { userNameFromArn } from '../utils/arn.ts';
 
 export const registerAccountActionRead = (plugin: typeof awsConnector) => {
@@ -14,28 +12,21 @@ export const registerAccountActionRead = (plugin: typeof awsConnector) => {
         endpoints: IAM_ACTION_ENDPOINTS,
         config: [USER_MANAGEMENT_ROLE],
         handler: async ({ config, input }) => {
-            const region = resolveRegion(config.AWS_REGION);
-
-            const assumed = await assumeRole({
-                endpoint: stsEndpoint(region),
-                region,
-                credentials: {
-                    accessKeyId: config.AWS_ACCESS_KEY_ID,
-                    secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
-                },
+            const iamClient = await buildIamClient({
+                config,
                 roleArn: config.AWS_USER_MANAGEMENT_ROLE,
                 roleSessionName: 'openiga-aws-iam-user-read',
             });
 
             const userName = userNameFromArn(input.accountId);
 
-            const exists = await userExists({ endpoint: IAM_ENDPOINT, credentials: assumed, userName });
+            const exists = await checkUserExists(iamClient, userName);
+
             if (!exists) {
                 return { exists: false, enabled: false };
             }
 
-            // Enabled = the user still has console access (a login profile).
-            const enabled = await hasLoginProfile({ endpoint: IAM_ENDPOINT, credentials: assumed, userName });
+            const enabled = await checkLoginProfileExists(iamClient, userName);
 
             return { exists: true, enabled };
         },

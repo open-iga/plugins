@@ -1,17 +1,63 @@
+import {
+    CreateLoginProfileCommand,
+    CreateUserCommand,
+    EntityAlreadyExistsException,
+    GetUserCommand,
+    type IAMClient,
+} from '@aws-sdk/client-iam';
 import { sendEmail } from '@open-iga/connector-sdk';
 import type awsConnector from '../aws-connector.ts';
 import { USER_MANAGEMENT_ROLE } from '../utils/role-config.ts';
-import { assumeRole } from '../utils/sts.ts';
-import { IAM_ENDPOINT, stsEndpoint, IAM_ACTION_ENDPOINTS } from '../utils/aws-endpoints.ts';
-import { resolveRegion } from '../utils/region.ts';
-import { createUser, EMAIL_TAG } from '../utils/iam.create-user.ts';
-import { getUser } from '../utils/iam.get-user.ts';
-import { createLoginProfile, hasLoginProfile } from '../utils/iam.login-profile.ts';
+import { buildIamClient } from '../utils/client.ts';
+import { IAM_ACTION_ENDPOINTS } from '../utils/aws-endpoints.ts';
 import { generateTemporaryPassword } from '../utils/password.ts';
+import { checkLoginProfileExists } from '../utils/iam.ts';
+import { accountIdFromArn } from '../utils/arn.ts';
 import { userNameFromEmail } from '../utils/username.ts';
 
-// ARN shape: arn:aws:iam::<accountId>:user/<name>. The console sign-in URL is account-scoped.
-const accountIdFromArn = (arn: string): string => arn.split(':')[4] ?? '';
+// IAM has no email field, so the email is saved as a user tag.
+const EMAIL_TAG = 'Email';
+
+type CreateUserArgs = { iamClient: IAMClient; userName: string; email: string };
+
+// Resolves undefined when the user name is already taken.
+// https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateUser.html
+const createUser = async ({ iamClient, userName, email }: CreateUserArgs) => {
+    try {
+        const { User } = await iamClient.send(
+            new CreateUserCommand({ UserName: userName, Tags: [{ Key: EMAIL_TAG, Value: email }] }),
+        );
+
+        if (!User?.Arn) {
+            throw new Error(`CreateUser returned no ARN for "${userName}"`);
+        }
+
+        return { arn: User.Arn };
+    } catch (error) {
+        if (error instanceof EntityAlreadyExistsException) {
+            return undefined;
+        }
+
+        throw error;
+    }
+};
+
+// Returns the ARN of an existing user, only when it has the same email and console access.
+const getReusableUserArn = async ({ iamClient, userName, email }: CreateUserArgs): Promise<string> => {
+    const { User } = await iamClient.send(new GetUserCommand({ UserName: userName }));
+    const taggedEmail = User?.Tags?.find((tag) => tag.Key === EMAIL_TAG)?.Value;
+
+    if (!User?.Arn || taggedEmail?.toLowerCase() !== email.trim().toLowerCase()) {
+        throw new Error(`IAM user "${userName}" already exists and is not tagged ${EMAIL_TAG}=${email}`);
+    }
+
+    // No login profile means disabled or half-created, so report failure instead of success.
+    if (!(await checkLoginProfileExists(iamClient, userName))) {
+        throw new Error(`IAM user "${userName}" exists without console access; enable or delete it first`);
+    }
+
+    return User.Arn;
+};
 
 export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
     plugin.registerAccountActions('iam-user', {
@@ -28,71 +74,48 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
             },
         ],
         handler: async ({ config, input }) => {
-            const region = resolveRegion(config.AWS_REGION);
-
-            const assumed = await assumeRole({
-                endpoint: stsEndpoint(region),
-                region,
-                credentials: {
-                    accessKeyId: config.AWS_ACCESS_KEY_ID,
-                    secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
-                },
+            const iamClient = await buildIamClient({
+                config,
                 roleArn: config.AWS_USER_MANAGEMENT_ROLE,
                 roleSessionName: 'openiga-aws-iam-user-create',
             });
 
             const userName = userNameFromEmail(input.email);
-            let created;
-            try {
-                created = await createUser({
-                    endpoint: IAM_ENDPOINT,
-                    credentials: assumed,
-                    userName,
-                    email: input.email,
-                });
-            } catch (error) {
-                if (!String(error).includes('EntityAlreadyExists')) throw error;
+            const createdUser = await createUser({ iamClient, userName, email: input.email });
 
-                // Reuse the existing user only if its Email tag matches; the username is just the email's first part.
-                const existing = await getUser({ endpoint: IAM_ENDPOINT, credentials: assumed, userName });
-                if (existing.tags[EMAIL_TAG]?.toLowerCase() !== input.email.trim().toLowerCase()) {
-                    throw new Error(
-                        `IAM user "${userName}" already exists and is not tagged ${EMAIL_TAG}=${input.email}`,
-                    );
-                }
+            if (!createdUser) {
+                const existingArn = await getReusableUserArn({ iamClient, userName, email: input.email });
 
-                // No login profile means disabled or half-created, so report failure instead of success
-                if (!(await hasLoginProfile({ endpoint: IAM_ENDPOINT, credentials: assumed, userName }))) {
-                    throw new Error(`IAM user "${userName}" exists without console access; enable or delete it first`);
-                }
-                return { accountId: existing.arn, created: false };
+                return { accountId: existingArn, created: false };
             }
 
             // To grant the console access to user with a one-time password that must be changed after the first login
             const temporaryPassword = generateTemporaryPassword(config.AWS_PASSWORD_PATTERN);
-            await createLoginProfile({
-                endpoint: IAM_ENDPOINT,
-                credentials: assumed,
-                userName: created.userName,
-                password: temporaryPassword,
-            });
+            // https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateLoginProfile.html
+            await iamClient.send(
+                new CreateLoginProfileCommand({
+                    UserName: userName,
+                    Password: temporaryPassword,
+                    PasswordResetRequired: true,
+                }),
+            );
 
             // Deliver credentials via the Host email capability so the password only travels
             // through that side channel — never through this action's return value. The Host
             // injects the recipient from the invocation input; the connector supplies data only and the Host renders the wording.
-            const loginUrl = `https://${accountIdFromArn(created.arn)}.signin.aws.amazon.com/console`;
+            const loginUrl = `https://${accountIdFromArn(createdUser.arn)}.signin.aws.amazon.com/console`;
             sendEmail({
                 template: 'credentials',
                 reason: 'onboarded',
                 system: 'AWS',
                 loginUrl,
-                username: created.userName,
+                username: userName,
                 password: temporaryPassword,
                 passwordChangeRequired: true,
             });
 
             return {
-                accountId: created.arn,
+                accountId: createdUser.arn,
                 created: true,
             };
         },

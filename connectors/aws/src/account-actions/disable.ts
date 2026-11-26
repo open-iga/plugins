@@ -1,9 +1,9 @@
+import { DeleteLoginProfileCommand } from '@aws-sdk/client-iam';
 import type awsConnector from '../aws-connector.ts';
 import { USER_MANAGEMENT_ROLE } from '../utils/role-config.ts';
-import { assumeRole } from '../utils/sts.ts';
-import { IAM_ENDPOINT, stsEndpoint, IAM_ACTION_ENDPOINTS } from '../utils/aws-endpoints.ts';
-import { resolveRegion } from '../utils/region.ts';
-import { deleteLoginProfile } from '../utils/iam.login-profile.ts';
+import { buildIamClient } from '../utils/client.ts';
+import { IAM_ACTION_ENDPOINTS } from '../utils/aws-endpoints.ts';
+import { checkTargetExists } from '../utils/iam.ts';
 import { userNameFromArn } from '../utils/arn.ts';
 
 export const registerAccountActionDisable = (plugin: typeof awsConnector) => {
@@ -13,27 +13,17 @@ export const registerAccountActionDisable = (plugin: typeof awsConnector) => {
         endpoints: IAM_ACTION_ENDPOINTS,
         config: [USER_MANAGEMENT_ROLE],
         handler: async ({ config, input }) => {
-            const region = resolveRegion(config.AWS_REGION);
-
-            const assumed = await assumeRole({
-                endpoint: stsEndpoint(region),
-                region,
-                credentials: {
-                    accessKeyId: config.AWS_ACCESS_KEY_ID,
-                    secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
-                },
+            const iamClient = await buildIamClient({
+                config,
                 roleArn: config.AWS_USER_MANAGEMENT_ROLE,
                 roleSessionName: 'openiga-aws-iam-user-disable',
             });
 
             const userName = userNameFromArn(input.accountId);
 
-            try {
-                await deleteLoginProfile({ endpoint: IAM_ENDPOINT, credentials: assumed, userName });
-            } catch (error) {
-                // No console access to begin with — already disabled, keep the action idempotent.
-                if (!String(error).includes('NoSuchEntity')) throw error;
-            }
+            // A missing login profile means the user is already disabled.
+            // https://docs.aws.amazon.com/IAM/latest/APIReference/API_DeleteLoginProfile.html
+            await checkTargetExists(iamClient.send(new DeleteLoginProfileCommand({ UserName: userName })));
 
             return { disabled: true };
         },
