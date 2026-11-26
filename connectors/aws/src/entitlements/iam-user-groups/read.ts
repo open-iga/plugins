@@ -1,38 +1,35 @@
+import { paginateListGroupsForUser } from '@aws-sdk/client-iam';
 import type awsConnector from '../../aws-connector.ts';
 import { ENTITLEMENT_MANAGEMENT_ROLE } from '../../utils/role-config.ts';
-import { assumeRole } from '../../utils/sts.ts';
-import { IAM_ENDPOINT, stsEndpoint, IAM_ACTION_ENDPOINTS } from '../../utils/aws-endpoints.ts';
-import { listGroupsAssignedToUser } from '../../utils/iam.group.ts';
+import { buildIamClient } from '../../utils/client.ts';
+import { IAM_ACTION_ENDPOINTS } from '../../utils/aws-endpoints.ts';
 import { userNameFromArn } from '../../utils/arn.ts';
-import { resolveRegion } from '../../utils/region.ts';
 
-export const registerEntitlementRead = (plugin: typeof awsConnector) => {
+export const registerIamUserGroupsRead = (plugin: typeof awsConnector) => {
     plugin.registerEntitlements('iam-user-group', {
         type: 'read',
         description: 'Read the IAM user groups a user belongs to (for entitlement drift detection)',
         endpoints: IAM_ACTION_ENDPOINTS,
         config: [ENTITLEMENT_MANAGEMENT_ROLE],
         handler: async ({ config, input }) => {
-            const region = resolveRegion(config.AWS_REGION);
-
-            const assumed = await assumeRole({
-                endpoint: stsEndpoint(region),
-                region,
-                credentials: {
-                    accessKeyId: config.AWS_ACCESS_KEY_ID,
-                    secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
-                },
+            const iamClient = await buildIamClient({
+                config,
                 roleArn: config.AWS_ENTITLEMENT_MANAGEMENT_ROLE,
                 roleSessionName: 'openiga-aws-iam-user-group-read',
             });
 
-            const groups = await listGroupsAssignedToUser({
-                endpoint: IAM_ENDPOINT,
-                credentials: assumed,
-                userName: userNameFromArn(input.accountId),
-            });
+            // https://docs.aws.amazon.com/IAM/latest/APIReference/API_ListGroupsForUser.html
+            const pages = paginateListGroupsForUser(
+                { client: iamClient },
+                { UserName: userNameFromArn(input.accountId) },
+            );
+            const entitlementIds: string[] = [];
 
-            return { entitlementIds: groups.map((group) => group.arn) };
+            for await (const page of pages) {
+                entitlementIds.push(...(page.Groups ?? []).map((group) => group.Arn!));
+            }
+
+            return { entitlementIds };
         },
     });
 };

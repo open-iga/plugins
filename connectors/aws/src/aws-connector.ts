@@ -4,10 +4,10 @@ import { registerAccountActionDisable } from './account-actions/disable.ts';
 import { registerAccountActionEnable } from './account-actions/enable.ts';
 import { registerAccountActionDelete } from './account-actions/delete.ts';
 import { registerAccountActionRead } from './account-actions/read.ts';
-import { registerEntitlementDiscover } from './entitlements/iam-user-groups/discover.ts';
-import { registerEntitlementGrant } from './entitlements/iam-user-groups/grant.ts';
-import { registerEntitlementRevoke } from './entitlements/iam-user-groups/revoke.ts';
-import { registerEntitlementRead } from './entitlements/iam-user-groups/read.ts';
+import { registerIamUserGroupsDiscover } from './entitlements/iam-user-groups/discover.ts';
+import { registerIamUserGroupGrant } from './entitlements/iam-user-groups/grant.ts';
+import { registerIamUserGroupsRevoke } from './entitlements/iam-user-groups/revoke.ts';
+import { registerIamUserGroupsRead } from './entitlements/iam-user-groups/read.ts';
 
 export const awsConnector = new OpenIgaConnector({
     name: 'AWS',
@@ -35,9 +35,9 @@ registerAccountActionEnable(awsConnector);
 registerAccountActionDelete(awsConnector);
 registerAccountActionRead(awsConnector);
 
-registerEntitlementDiscover(awsConnector);
-registerEntitlementGrant(awsConnector);
-registerEntitlementRevoke(awsConnector);
-registerEntitlementRead(awsConnector);
+registerIamUserGroupsDiscover(awsConnector);
+registerIamUserGroupGrant(awsConnector);
+registerIamUserGroupsRevoke(awsConnector);
+registerIamUserGroupsRead(awsConnector);
 
 export default awsConnector;

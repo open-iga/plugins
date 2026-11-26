@@ -1,9 +1,8 @@
+import { ListGroupsCommand } from '@aws-sdk/client-iam';
 import type awsConnector from '../../aws-connector.ts';
 import { GROUP_DISCOVERY_ROLE } from '../../utils/role-config.ts';
-import { assumeRole } from '../../utils/sts.ts';
-import { IAM_ENDPOINT, stsEndpoint, IAM_ACTION_ENDPOINTS } from '../../utils/aws-endpoints.ts';
-import { listGroups } from '../../utils/iam.group.ts';
-import { resolveRegion } from '../../utils/region.ts';
+import { buildIamClient } from '../../utils/client.ts';
+import { IAM_ACTION_ENDPOINTS } from '../../utils/aws-endpoints.ts';
 
 // Parse ';' separated patterns into RegEx
 const parseExcludePatterns = (raw: string | null): RegExp[] => {
@@ -22,7 +21,7 @@ const parseExcludePatterns = (raw: string | null): RegExp[] => {
         });
 };
 
-export const registerEntitlementDiscover = (plugin: typeof awsConnector) => {
+export const registerIamUserGroupsDiscover = (plugin: typeof awsConnector) => {
     plugin.registerEntitlements('iam-user-group', {
         type: 'discover',
         description: 'Discover assignable IAM user groups for the entitlement catalog',
@@ -41,39 +40,33 @@ export const registerEntitlementDiscover = (plugin: typeof awsConnector) => {
             },
         ],
         handler: async ({ config, input }) => {
-            const region = resolveRegion(config.AWS_REGION);
-
             const excludePatterns = parseExcludePatterns(config.AWS_GROUP_EXCLUDE_PATTERNS);
 
-            const assumed = await assumeRole({
-                endpoint: stsEndpoint(region),
-                region,
-                credentials: {
-                    accessKeyId: config.AWS_ACCESS_KEY_ID,
-                    secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
-                },
+            const iamClient = await buildIamClient({
+                config,
                 roleArn: config.AWS_GROUP_DISCOVERY_ROLE,
                 roleSessionName: 'openiga-aws-iam-user-group-discover',
             });
 
-            // The AWS marker is the cursor: one page per call
-            const { groups, nextMarker } = await listGroups({
-                endpoint: IAM_ENDPOINT,
-                credentials: assumed,
-                marker: input.cursor,
-            });
+            // The AWS marker is the cursor: one page per call.
+            // https://docs.aws.amazon.com/IAM/latest/APIReference/API_ListGroups.html
+            const { Groups, IsTruncated, Marker } = await iamClient.send(
+                new ListGroupsCommand({ Marker: input.cursor }),
+            );
 
-            const catalog = groups.filter(
+            const catalog = (Groups ?? []).filter(
                 (group) =>
-                    !excludePatterns.some((pattern) => pattern.test(group.groupName) || pattern.test(group.path)),
+                    !excludePatterns.some(
+                        (pattern) => pattern.test(group.GroupName ?? '') || pattern.test(group.Path ?? ''),
+                    ),
             );
 
             return {
-                entitlements: catalog.map((group) => ({
-                    entitlementId: group.arn,
-                    name: group.groupName,
+                entitlements: catalog.map(({ Arn, GroupName }) => ({
+                    entitlementId: Arn!,
+                    name: GroupName ?? 'MISSING_GROUP_NAME',
                 })),
-                ...(nextMarker ? { nextCursor: nextMarker } : {}),
+                ...(IsTruncated && Marker ? { nextCursor: Marker } : {}),
             };
         },
     });

@@ -1,12 +1,11 @@
 import { sendEmail } from '@open-iga/connector-sdk';
+import { CreateLoginProfileCommand } from '@aws-sdk/client-iam';
 import type awsConnector from '../aws-connector.ts';
 import { USER_MANAGEMENT_ROLE } from '../utils/role-config.ts';
-import { assumeRole } from '../utils/sts.ts';
-import { IAM_ENDPOINT, stsEndpoint, IAM_ACTION_ENDPOINTS } from '../utils/aws-endpoints.ts';
-import { resolveRegion } from '../utils/region.ts';
-import { createLoginProfile } from '../utils/iam.login-profile.ts';
+import { buildIamClient } from '../utils/client.ts';
+import { IAM_ACTION_ENDPOINTS } from '../utils/aws-endpoints.ts';
 import { generateTemporaryPassword } from '../utils/password.ts';
-import { accountIdFromArn, userNameFromArn } from '../utils/arn.ts';
+import { buildLoginUrl, userNameFromArn } from '../utils/arn.ts';
 
 export const registerAccountActionEnable = (plugin: typeof awsConnector) => {
     plugin.registerAccountActions('iam-user', {
@@ -15,15 +14,8 @@ export const registerAccountActionEnable = (plugin: typeof awsConnector) => {
         endpoints: IAM_ACTION_ENDPOINTS,
         config: [USER_MANAGEMENT_ROLE],
         handler: async ({ config, input }) => {
-            const region = resolveRegion(config.AWS_REGION);
-
-            const assumed = await assumeRole({
-                endpoint: stsEndpoint(region),
-                region,
-                credentials: {
-                    accessKeyId: config.AWS_ACCESS_KEY_ID,
-                    secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
-                },
+            const iamClient = await buildIamClient({
+                config,
                 roleArn: config.AWS_USER_MANAGEMENT_ROLE,
                 roleSessionName: 'openiga-aws-iam-user-enable',
             });
@@ -32,14 +24,16 @@ export const registerAccountActionEnable = (plugin: typeof awsConnector) => {
 
             // Restore console access with a fresh one-time password the user must change at login.
             const temporaryPassword = generateTemporaryPassword();
-            await createLoginProfile({
-                endpoint: IAM_ENDPOINT,
-                credentials: assumed,
-                userName,
-                password: temporaryPassword,
-            });
+            // https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateLoginProfile.html
+            await iamClient.send(
+                new CreateLoginProfileCommand({
+                    UserName: userName,
+                    Password: temporaryPassword,
+                    PasswordResetRequired: true,
+                }),
+            );
 
-            const loginUrl = `https://${accountIdFromArn(input.accountId)}.signin.aws.amazon.com/console`;
+            const loginUrl = buildLoginUrl(input.accountId);
             sendEmail({
                 template: 'credentials',
                 reason: 'reenabled',

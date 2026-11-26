@@ -1,3 +1,4 @@
+import type { BunPlugin } from 'bun';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { codegenPlugin, VIRTUAL_ENTRY } from '../bun-plugin/codegen.plugin.ts';
@@ -11,7 +12,23 @@ export type BuildContext = {
 
 export const OUT_DIR = '.open-iga';
 
-export const compile = async ({ entryPoint }: { entryPoint?: string }) => {
+// Loads the default export of each file given through `--plugin`.
+const loadPlugins = (pluginPaths: string[]): Promise<BunPlugin[]> =>
+    Promise.all(
+        pluginPaths.map(async (pluginPath) => {
+            const { default: plugin } = await import(path.resolve(pluginPath));
+
+            if (!plugin?.setup) {
+                throw new Error(`Plugin file ${pluginPath} must default export a build plugin`);
+            }
+
+            return plugin;
+        }),
+    );
+
+type CompileArgs = { entryPoint?: string; plugin?: string[] };
+
+export const compile = async ({ entryPoint, plugin: pluginPaths = [] }: CompileArgs) => {
     if (!entryPoint) {
         throw new Error('Missing --entryPoint');
     }
@@ -21,6 +38,7 @@ export const compile = async ({ entryPoint }: { entryPoint?: string }) => {
     }
 
     const buildContext: BuildContext = {};
+    const connectorPlugins = await loadPlugins(pluginPaths);
 
     await Bun.build({
         entrypoints: [VIRTUAL_ENTRY],
@@ -28,6 +46,6 @@ export const compile = async ({ entryPoint }: { entryPoint?: string }) => {
         format: 'cjs',
         target: 'browser',
         minify: true,
-        plugins: [codegenPlugin(entryPoint, buildContext), wasmPlugin(buildContext)],
+        plugins: [codegenPlugin(entryPoint, buildContext), ...connectorPlugins, wasmPlugin(buildContext)],
     });
 };

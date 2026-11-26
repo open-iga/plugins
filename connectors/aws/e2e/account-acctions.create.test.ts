@@ -1,6 +1,6 @@
 import { createMockedHost, type MockedHost } from '@open-iga/connector-sdk/test';
 import { awsConnector } from '../src/aws-connector.ts';
-import { getLoginProfile } from '../src/utils/iam.login-profile.ts';
+import { GetLoginProfileCommand, IAMClient } from '@aws-sdk/client-iam';
 
 const tenant = { id: '000000000000' };
 
@@ -51,13 +51,14 @@ describe('account-actions.create', () => {
         // emulator with the forced-reset flag. The console password itself is write-only and
         // can't be read back — verifying the profile is the strongest no-real-AWS check.
         const userName = 'test.user';
-        const profile = await getLoginProfile({
+        const iamClient = new IAMClient({
+            region: 'us-east-1',
             endpoint: process.env.AWS_ENDPOINT_URL ?? '',
             credentials: { accessKeyId: 'test', secretAccessKey: 'test' },
-            userName,
         });
-        expect(profile.userName).toBe(userName);
-        expect(profile.passwordResetRequired).toBe(true);
+        const { LoginProfile } = await iamClient.send(new GetLoginProfileCommand({ UserName: userName }));
+        expect(LoginProfile?.UserName).toBe(userName);
+        expect(LoginProfile?.PasswordResetRequired).toBe(true);
     });
 
     it('should return the existing user without creating a new one for a duplicate email', async () => {
