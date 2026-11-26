@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
 import { createMockedHost, type MockedHost } from '@open-iga/connector-sdk/test';
 import { awsConnector } from '../src/aws-connector.ts';
-import { createGroup } from '../src/utils/iam.group.ts';
+import { CreateGroupCommand, IAMClient } from '@aws-sdk/client-iam';
 
 const tenant = { id: '000000000000' };
 
@@ -28,9 +28,11 @@ describe('entitlements', () => {
         });
 
         // Seed assignable groups plus one internal group excluded by the operator regex.
-        await createGroup({ endpoint: endpoint(), credentials, groupName: 'ReadOnly', path: '/' });
-        await createGroup({ endpoint: endpoint(), credentials, groupName: 'Admins', path: '/' });
-        await createGroup({ endpoint: endpoint(), credentials, groupName: 'ci-deployer', path: '/' });
+        const iamClient = new IAMClient({ region: 'us-east-1', endpoint: endpoint(), credentials });
+
+        for (const groupName of ['ReadOnly', 'Admins', 'ci-deployer']) {
+            await iamClient.send(new CreateGroupCommand({ GroupName: groupName, Path: '/' }));
+        }
     });
 
     afterAll(async () => {

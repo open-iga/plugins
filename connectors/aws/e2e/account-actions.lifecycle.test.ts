@@ -1,20 +1,17 @@
 import { createMockedHost, type MockedHost } from '@open-iga/connector-sdk/test';
 import { awsConnector } from '../src/aws-connector.ts';
-import { getLoginProfile } from '../src/utils/iam.login-profile.ts';
+import { checkTargetExists } from '../src/utils/iam.ts';
+import { GetLoginProfileCommand, IAMClient } from '@aws-sdk/client-iam';
 
 const tenant = { id: '000000000000' };
 
 const endpoint = () => process.env.AWS_ENDPOINT_URL ?? '';
 const credentials = { accessKeyId: 'test', secretAccessKey: 'test' };
 
-const hasLoginProfile = async (userName: string): Promise<boolean> => {
-    try {
-        await getLoginProfile({ endpoint: endpoint(), credentials, userName });
-        return true;
-    } catch (error) {
-        if (String(error).includes('NoSuchEntity')) return false;
-        throw error;
-    }
+const checkLoginProfile = async (userName: string): Promise<boolean> => {
+    const iamClient = new IAMClient({ region: 'us-east-1', endpoint: endpoint(), credentials });
+
+    return checkTargetExists(iamClient.send(new GetLoginProfileCommand({ UserName: userName })));
 };
 
 describe('account-actions.lifecycle', () => {
@@ -53,7 +50,7 @@ describe('account-actions.lifecycle', () => {
         expect(created.ok).toBe(true);
         if (!created.ok) return;
         const { accountId } = created.output;
-        expect(await hasLoginProfile(userName)).toBe(true);
+        expect(await checkLoginProfile(userName)).toBe(true);
 
         // Read — exists and enabled.
         const afterCreate = await host.callAccountActions('iam-user', 'read', { tenant, accountId });
@@ -64,7 +61,7 @@ describe('account-actions.lifecycle', () => {
         const disabled = await host.callAccountActions('iam-user', 'disable', { tenant, accountId });
         expect(disabled.ok).toBe(true);
         if (disabled.ok) expect(disabled.output.disabled).toBe(true);
-        expect(await hasLoginProfile(userName)).toBe(false);
+        expect(await checkLoginProfile(userName)).toBe(false);
 
         // Read — still exists, now disabled.
         const afterDisable = await host.callAccountActions('iam-user', 'read', { tenant, accountId });
@@ -75,14 +72,14 @@ describe('account-actions.lifecycle', () => {
         const enabled = await host.callAccountActions('iam-user', 'enable', { tenant, accountId });
         expect(enabled.ok).toBe(true);
         if (enabled.ok) expect(enabled.output.enabled).toBe(true);
-        expect(await hasLoginProfile(userName)).toBe(true);
+        expect(await checkLoginProfile(userName)).toBe(true);
         expect(host.hostFunctions.sentEmails.at(-1)?.reason).toBe('reenabled');
 
         // Delete — user removed entirely.
         const deleted = await host.callAccountActions('iam-user', 'delete', { tenant, accountId });
         expect(deleted.ok).toBe(true);
         if (deleted.ok) expect(deleted.output.deleted).toBe(true);
-        expect(await hasLoginProfile(userName)).toBe(false);
+        expect(await checkLoginProfile(userName)).toBe(false);
 
         // Read — no longer exists.
         const afterDelete = await host.callAccountActions('iam-user', 'read', { tenant, accountId });

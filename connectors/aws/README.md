@@ -6,7 +6,7 @@ Manages **IAM users** (account lifecycle) and **IAM user-group membership** (ent
 
 ## How it works
 
-Base credentials call STS to **assume a least-privilege role per handler** (grant/discover/user-management), then hit the IAM Query API (SigV4-signed, `us-east-1` — IAM is global).
+Base credentials call STS to **assume a least-privilege role per handler** (grant/discover/user-management), then call the IAM API through the official AWS SDK (`us-east-1` — IAM is global).
 Never returns secrets: a created user's temp password is delivered via the host email capability (only for now. phishing attack vector is high and email capability might be removed soon), not the action output.
 
 ## Config (connector-level)
@@ -35,7 +35,6 @@ Account `id` = the user ARN.
 
 > [!NOTE]
 > Entitlement = membership in a pre-existing IAM group (groups are provisioned out-of-band; a group's own policy decides what it grants, e.g. cross-account role assumption)
-> Group creation util in this connector is purely for testing and is not exposed outside
 
 | Action     | Description                                                         | Extra config                                                   |
 | ---------- | ------------------------------------------------------------------- | -------------------------------------------------------------- |

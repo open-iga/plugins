@@ -3,14 +3,14 @@
     "version": "0.5.0",
     "type": "module",
     "scripts": {
-        "compile": "open-iga compile --entryPoint src/aws-connector.ts",
+        "compile": "open-iga compile --entryPoint src/aws-connector.ts --plugin src/xml-parser.plugin.ts",
         "test": "bun test",
+        "compile-and-test": "bun run compile && bun run test",
         "typecheck": "bun --check"
     },
     "dependencies": {
-        "aws4fetch": "catalog:",
-        "fast-xml-parser": "catalog:",
-        "zod": "catalog:"
+        "@aws-sdk/client-iam": "catalog:",
+        "@aws-sdk/client-sts": "catalog:"
     },
     "devDependencies": {
         "@open-iga/connector-sdk": "workspace:*",
