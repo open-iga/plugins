@@ -1,7 +1,3 @@
-export const IAM_ENDPOINT = 'https://iam.amazonaws.com';
-
-export const stsEndpoint = (region: string): string => `https://sts.${region}.amazonaws.com`;
-
 type Endpoint = { method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'; url: string; description: string };
 
 // Manifest endpoint allow-list shared by every IAM action/entitlement: STS to assume a role,
