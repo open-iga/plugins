@@ -5,7 +5,7 @@ import { USER_MANAGEMENT_ROLE } from '../utils/role-config.ts';
 import { buildIamClient } from '../utils/client.ts';
 import { IAM_ACTION_ENDPOINTS } from '../utils/aws-endpoints.ts';
 import { generateTemporaryPassword } from '../utils/password.ts';
-import { accountIdFromArn, userNameFromArn } from '../utils/arn.ts';
+import { buildLoginUrl, userNameFromArn } from '../utils/arn.ts';
 
 export const registerAccountActionEnable = (plugin: typeof awsConnector) => {
     plugin.registerAccountActions('iam-user', {
@@ -33,7 +33,7 @@ export const registerAccountActionEnable = (plugin: typeof awsConnector) => {
                 }),
             );
 
-            const loginUrl = `https://${accountIdFromArn(input.accountId)}.signin.aws.amazon.com/console`;
+            const loginUrl = buildLoginUrl(input.accountId);
             sendEmail({
                 template: 'credentials',
                 reason: 'reenabled',

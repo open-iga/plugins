@@ -12,7 +12,7 @@ import { buildIamClient } from '../utils/client.ts';
 import { IAM_ACTION_ENDPOINTS } from '../utils/aws-endpoints.ts';
 import { generateTemporaryPassword } from '../utils/password.ts';
 import { checkLoginProfileExists } from '../utils/iam.ts';
-import { accountIdFromArn } from '../utils/arn.ts';
+import { buildLoginUrl } from '../utils/arn.ts';
 import { userNameFromEmail } from '../utils/username.ts';
 
 // IAM has no email field, so the email is saved as a user tag.
@@ -103,7 +103,7 @@ export const registerAccountActionCreation = (plugin: typeof awsConnector) => {
             // Deliver credentials via the Host email capability so the password only travels
             // through that side channel — never through this action's return value. The Host
             // injects the recipient from the invocation input; the connector supplies data only and the Host renders the wording.
-            const loginUrl = `https://${accountIdFromArn(createdUser.arn)}.signin.aws.amazon.com/console`;
+            const loginUrl = buildLoginUrl(createdUser.arn);
             sendEmail({
                 template: 'credentials',
                 reason: 'onboarded',
