@@ -8,6 +8,7 @@ const { values, positionals } = parseArgs({
     allowPositionals: true,
     options: {
         entryPoint: { type: 'string', short: 'e' },
+        plugin: { type: 'string', multiple: true },
     },
 });
 
